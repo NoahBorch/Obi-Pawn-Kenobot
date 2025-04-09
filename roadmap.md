@@ -3,7 +3,7 @@
 ## 🧱 Phase 1: Core Bot MVP (With `python-chess`)
 **Goal:** Get a basic bot running against a real game engine or user
 
-- [ ] Set up project structure & Git
+- [x] Set up project structure & Git
 - [ ] Install `python-chess` and create a minimal `main.py`
 - [ ] Initialize a `chess.Board()` object and create a basic game loop
 - [ ] Implement a simple material-counting evaluation function
