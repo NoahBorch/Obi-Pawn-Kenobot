@@ -4,8 +4,8 @@
 **Goal:** Get a basic bot running against a real game engine or user
 
 - [x] Set up project structure & Git
-- [ ] Install `python-chess` and create a minimal `main.py`
-- [ ] Initialize a `chess.Board()` object and create a basic game loop
+- [x] Install `python-chess` and create a minimal `main.py`
+- [x] Initialize a `chess.Board()` object and create a basic game loop
 - [ ] Implement a simple material-counting evaluation function
 - [ ] Create a function that selects the best move from legal ones based on evaluation
 - [ ] Add a CLI interface for human vs bot play (e.g. `input()` for moves)
