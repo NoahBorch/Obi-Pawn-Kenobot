@@ -2,7 +2,9 @@ import chess
 import random
 import argparse
 from utils.log import logger, configure_logging
-from engine.search import select_single_move
+from utils.counters import positions_evaluated, lines_pruned
+from engine.evaluation import evaluate_position
+from engine.search import find_best_move
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Play a game against Obi-Pawn Kenobot")
@@ -50,6 +52,7 @@ def get_log_level(args):
     return "playing" if args.play else args.log
 
 def log_result(board):
+    global positions_evaluated, lines_pruned
     logger.playing(f"Game Over: {board.result()}")
     logger.playing("Final Position:\n" + str(board))
     if board.result() == "1-0":
@@ -58,6 +61,7 @@ def log_result(board):
         logger.playing("Black won!")
     else:
         logger.playing("It's a draw!")
+    logger.info(f"Positions evaluated: {positions_evaluated} | Lines pruned: {lines_pruned}")
     
 def main():
     args, players_color = parse_args()
@@ -66,6 +70,7 @@ def main():
 
 
     board = chess.Board()
+    depth = 4
     logger.playing("Welcome to Obi-Pawn Kenobot! Let's play.")
     logger.playing("You are playing as " + ("White" if players_color == chess.WHITE else "Black"))
 
@@ -73,10 +78,10 @@ def main():
         logger.playing("Obi-Pawn Kenobot is playing against itself.")
         while not board.is_game_over():
             logger.playing("\n" + str(board))
-            move = select_single_move(board, color=board.turn)
+            move, eval = find_best_move(board, depth)
             board.push(move)
-            logger.playing(f"Obi-Pawn plays: {move}")
-            logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options.")
+            logger.playing(f"Obi-Pawn plays: {board.san()}")
+            logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
         log_result(board)
         return
 
@@ -91,10 +96,10 @@ def main():
                 logger.warning("Invalid move format or illegal move. Try again.")
                 continue
         else:
-            move = select_single_move(board, color=board.turn)
+            move, eval = find_best_move(board, depth)
             board.push(move)
             logger.playing(f"Obi-Pawn plays: {move}")
-            logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options.")
+            logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
 
     log_result(board)
 

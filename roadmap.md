@@ -6,13 +6,24 @@
 - [x] Set up project structure & Git
 - [x] Install `python-chess` and create a minimal `main.py`
 - [x] Initialize a `chess.Board()` object and create a basic game loop
-- [ ] Implement a simple material-counting evaluation function
-- [ ] Create a function that selects the best move from legal ones based on evaluation
-- [ ] Add a CLI interface for human vs bot play (e.g. `input()` for moves)
-- [ ] Print move decisions and evaluation scores for debugging
+- [x] Implement a simple material-counting evaluation function
+- [x] Create a function that selects the best move from legal ones based on evaluation
+- [x] Add a CLI interface for human vs bot play (e.g. `input()` for moves)
+- [x] Print move decisions and evaluation scores for debugging
 - [ ] Set up unit tests for evaluation and bot logic
 
-## 🌐 Phase 2: Lichess Integration
+## 🚀 Phase 2: Smarter Engine (Still using `python-chess`)
+**Goal:** Make the bot semi-decent
+
+- [x] Implement minimax search with fixed depth
+- [x] Add alpha-beta pruning to reduce unnecessary branches
+- [x] Implement move ordering
+- [ ] Improve evaluation function with basic heuristics (e.g., piece-square tables, king safety)
+- [ ] Add clock-based time management (evaluate and move within X milliseconds)
+- [ ] Add support for loading board states from FEN for easier testing
+- [ ] Add PGN generation to store game history
+
+## 🌐 Phase 3: Lichess Integration
 **Goal:** Play games online through Lichess bots API
 
 - [ ] Register a bot account on Lichess and generate a personal API token
@@ -23,16 +34,6 @@
 - [ ] Feed opponent moves into your local `chess.Board` instance
 - [ ] Respond with your bot's moves using the same API
 - [ ] Log game results and store PGNs locally
-
-## 🚀 Phase 3: Smarter Engine (Still using `python-chess`)
-**Goal:** Make the bot semi-decent
-
-- [ ] Implement minimax search with fixed depth
-- [ ] Add alpha-beta pruning to reduce unnecessary branches
-- [ ] Improve evaluation function with basic heuristics (e.g., piece-square tables, king safety)
-- [ ] Add clock-based time management (evaluate and move within X milliseconds)
-- [ ] Add support for loading board states from FEN for easier testing
-- [ ] Add PGN generation to store game history
 
 ## 🧠 Phase 4: Opening Book + Search Improvements
 **Goal:** Optimize early game & speed up search

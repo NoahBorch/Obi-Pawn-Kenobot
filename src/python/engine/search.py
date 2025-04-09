@@ -1,10 +1,13 @@
 
 import chess
 
-from engine.evaluation import evaluate_position
+from engine.evaluation import evaluate_position, MVV_LVA, add_check_bonus
+from utils.counters import positions_evaluated, lines_pruned
+from utils.log import logger
 
 
 def select_single_move(board, color=chess.BLACK, best_move=None, best_eval=None):
+    
     """
     Select a single move from the list of legal moves.
     :param board: The chess board, currently uses the python chess board object
@@ -41,4 +44,92 @@ def select_single_move(board, color=chess.BLACK, best_move=None, best_eval=None)
         
     return best_move
 
+def order_moves(board):
+    all_moves = list(board.legal_moves)
+    check_bonus = 100
+    # Sort moves by their type
+    promotions = []
+    captures = []
+    checks = []
+    non_captures = []
+    for move in all_moves:
+        if move.promotion:
+            promotions.append(move)
+        elif board.gives_check(move):
+            checks.append(move)
+        elif board.is_capture(move):
+            captures.append(move)
+        else:
+            non_captures.append(move)
+    logger.debug(f"Promotions: {len(promotions)}, Captures: {len(captures)}, Checks: {len(checks)}, Non-captures: {len(non_captures)}")
+    logger.debug(f"All captures: {captures}")
+    #Sort captures by MVV - LVA
+    captures.sort(key=lambda x: MVV_LVA(board, x) + add_check_bonus(board,x,check_bonus), reverse=True)
+    return promotions + captures + checks + non_captures
+
         
+
+def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
+    """
+    New Negamax alpha beta search function, using the python chess board object. This function is the old negamax function, 
+    but changed to work with my new chess bot. It uses the python chess board object and the evaluate_position function.
+    :param board: The chess board, currently uses the python chess board object
+    :param depth: The depth to search
+    :param alpha: The alpha value for alpha beta pruning
+    :param beta: The beta value for alpha beta pruning
+    :return: The evaluation score of the best move
+    """
+
+    global positions_evaluated, lines_pruned
+
+    if depth == 0 or board.outcome():
+        return evaluate_position(board)
+    
+    ordered_moves = order_moves(board)
+    max_eval = -float('inf')
+
+    local_positions_evaluated = 0
+    for move in ordered_moves:
+        local_positions_evaluated += 1
+        board.push(move)
+        eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
+        board.pop()
+        
+        if eval > max_eval:
+            max_eval = eval
+        alpha = max(alpha, eval)
+        if alpha >= beta:
+            lines_pruned += 1
+            break 
+
+    positions_evaluated += local_positions_evaluated
+
+    return max_eval
+
+def find_best_move(board, depth):
+    global positions_evaluated, lines_pruned
+    best_move = None
+    max_eval = -float('inf')
+    alpha = -float('inf')
+    beta = float('inf')
+
+    for move in board.legal_moves:
+        positions_evaluated += 1
+        board.push(move)
+        eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
+        board.pop()
+
+        if eval > max_eval:
+            max_eval = eval
+            best_move = move
+
+        alpha = max(alpha, eval)
+        if alpha >= beta:
+            lines_pruned += 1
+            break  
+
+    return best_move, max_eval
+
+
+
+
