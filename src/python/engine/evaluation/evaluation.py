@@ -108,7 +108,8 @@ def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns)
         else:
             phase = PHASE_MIDGAME
         if phase != last_logged_phase:
-            logger.info(f"Game has entered the {phase}!")
+            if debug_evaluation:
+                logger.debug(f"Phase changed from {last_logged_phase} to {phase}")
             last_logged_phase = phase
     else:   
         phase = PHASE_ENDGAME

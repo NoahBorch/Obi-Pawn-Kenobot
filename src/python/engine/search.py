@@ -5,6 +5,7 @@ from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_b
 from utils.counters import update_total_counters
 from utils.log import logger, debug_config
 
+
 debug_search = debug_config["search"]
 
 
@@ -48,7 +49,7 @@ def is_quiet(board):
     return True
 
 
-def quiescence_search(board, alpha, beta):
+def quiescence_search(board, qDepth, alpha, beta):
     
     """
     Perform a quiescence search on the given board.
@@ -62,8 +63,13 @@ def quiescence_search(board, alpha, beta):
     :param beta: The beta value for alpha-beta pruning
     :return: The best evaluation score of all possible moves
     """
-    #TODO: Add qDepth to the quiescence search
     max_eval = evaluate_position(board)
+
+    if board.outcome() or qDepth == 0:
+        return max_eval
+    if board.fullmove_number >= 70:
+        if board.is_game_over(claim_draw=True):
+            return -1
     if max_eval >= beta:
         return beta
     if max_eval > alpha:
@@ -74,7 +80,7 @@ def quiescence_search(board, alpha, beta):
     for move in order_moves(board, quiescence=True):
         local_positions_evaluated += 1
         board.push(move)
-        eval = -quiescence_search(board, -beta, -alpha)
+        eval = -quiescence_search(board, qDepth - 1 , -beta, -alpha)
         board.pop()
 
         if eval > max_eval:
@@ -105,8 +111,13 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     
     if board.outcome():
         return evaluate_position(board)
+    if board.fullmove_number >= 70:
+        if board.is_game_over(claim_draw=True):
+            return -1
     elif depth == 0:
-        return quiescence_search(board, alpha, beta)
+        from main import get_global_depth
+        qDepth = get_global_depth() // 2 + 2
+        return quiescence_search(board, qDepth, alpha, beta)
     
     ordered_moves = order_moves(board)
     max_eval = -float('inf')

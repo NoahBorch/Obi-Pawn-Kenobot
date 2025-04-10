@@ -2,11 +2,23 @@ import chess
 import chess.pgn
 import random
 import argparse
+import time
+
 from utils.log import logger, configure_logging, debug_config, log_result
 from utils.counters import get_total_counters, reset_total_counters
 from engine.search import find_best_move
 
 debug_main = debug_config["main"]
+
+depth = 5
+
+def set_global_depth(new_depth):
+    global depth
+    depth = new_depth
+
+def get_global_depth():
+    global depth
+    return depth
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Play a game against Obi-Pawn Kenobot")
@@ -27,13 +39,20 @@ def parse_args():
     parser.add_argument(
         "--player",
         choices=["white", "black", "random", "none", "choose_later"],
-        default="choose_later",
+        default="none",
     )
 
     parser.add_argument(
     "--selfplay-loop",
     action="store_true",
     help="Enable infinite bot vs bot self-play loop mode"
+    )
+
+    parser.add_argument(
+        "--depth",
+        type=int,
+        default=5,
+        help="Set the search depth for the engine (default: 5)"
     )
 
     args = parser.parse_args()
@@ -59,39 +78,60 @@ def parse_args():
 def get_log_level(args):
     return "playing" if args.play else args.log
 
-
-    
-def main():
-    global total_positions_evaluated, total_lines_pruned
-    args, players_color = parse_args()
-    # Configure logging based on user selection
-    configure_logging(get_log_level(args))
-
-    board = chess.Board()
-    depth = 3
-    logger.playing("Welcome to Obi-Pawn Kenobot! Let's play.")
-    logger.playing("You are playing as " + ("White" if players_color == chess.WHITE else "Black"))
-
-    #PGN
+def create_pgn_game_and_node(players_color, depth):
     game = chess.pgn.Game()
     game.headers["Event"] = "Obi-Pawn Kenobot Game"
     game.headers["White"] = "Human" if players_color == chess.WHITE else "Obi-Pawn"
     game.headers["Black"] = "Obi-Pawn" if players_color == chess.WHITE else "Human"
     game.headers["Depth"] = str(depth)
     node = game
+    return game, node
 
- 
+def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time):
+    counters = get_total_counters()
+    game.headers["PositionsEvaluated"] = str(counters[0])
+    game.headers["LinesPruned"] = str(counters[1])
+    game.headers["Result"] = board.result()
+    game.headers["Time"] = str(time.perf_counter() - start_time)
+
+    if players_color == "only_bot":
+        pgn_filename = "bot_vs_bot_games.pgn"
+    else:
+        pgn_filename = "bot_vs_human_games.pgn"
+
+    with open(pgn_filename, "a") as pgn_file:
+        print(game, file=pgn_file, end="\n\n")
+
+    logger.info(f"Game result added to {pgn_filename}.")
+    logger.info(f"Time taken: {game.headers['Time']} seconds")
+
+
+def main():
+    global total_positions_evaluated, total_lines_pruned, depth
+    args, players_color = parse_args()
+    # Configure logging based on user selection
+    configure_logging(get_log_level(args))
+
+    start_time = time.perf_counter()
+    board = chess.Board()
+    depth = args.depth
+
+    if players_color != "only_bot":
+        logger.playing("Welcome to Obi-Pawn Kenobot! Let's play.")
+        logger.playing("You are playing as " + ("White" if players_color == chess.WHITE else "Black"))
+    elif players_color == "only_bot":
+        logger.playing("Welcome to Obi-Pawn Kenobot! I am playing against myself.")
+        
+
+    #PGN
+    game, node = create_pgn_game_and_node(players_color, depth)
+
     if players_color == "only_bot" and args.selfplay_loop:
         logger.playing("Obi-Pawn Kenobot is playing against itself (loop mode).")
         while True:
             board = chess.Board()
 
-            game = chess.pgn.Game()
-            game.headers["Event"] = "Obi-Pawn Kenobot Self-Play"
-            game.headers["White"] = "Obi-Pawn"
-            game.headers["Black"] = "Obi-Pawn"
-            game.headers["Depth"] = str(depth)
-            node = game
+            game, node = create_pgn_game_and_node(chess.WHITE, depth)
 
             while not board.is_game_over():
                 logger.playing("\n" + str(board))
@@ -102,14 +142,7 @@ def main():
                 node = node.add_variation(move)
 
             log_result(board)
-
-            counters = get_total_counters()
-            game.headers["PositionsEvaluated"] = str(counters[0])
-            game.headers["LinesPruned"] = str(counters[1])
-            game.headers["Result"] = board.result()
-
-            with open("bot_vs_bot_games.pgn", "a") as pgn_file:
-                print(game, file=pgn_file, end="\n\n")
+            add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
 
             logger.info("Game finished and appended to PGN. Starting new game...\n")
             reset_total_counters()
@@ -148,20 +181,11 @@ def main():
     
     log_result(board)
 
-    counters = get_total_counters()
-    game.headers["PositionsEvaluated"] = str(counters[0])
-    game.headers["LinesPruned"] = str(counters[1])
-    game.headers["Result"] = board.result()
+    add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
 
-    if players_color == "only_bot":
-        pgn_filename = "bot_vs_bot_games.pgn"
-    else:
-        pgn_filename = "bot_vs_human_games.pgn"
-
-    with open(pgn_filename, "a") as pgn_file:
-        print(game, file=pgn_file, end="\n\n")  # ensure proper spacing between games
-
-    logger.info(f"Game PGN appended to {pgn_filename}")
+    end_time = time.perf_counter()
+    elapsed_time = end_time - start_time
+    logger.info(f"Total elapsed time: {elapsed_time:.2f} seconds")
 
 
     
