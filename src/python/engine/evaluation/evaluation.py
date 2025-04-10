@@ -103,7 +103,7 @@ def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns)
     if last_logged_phase != PHASE_ENDGAME:
         if opponent_material_count_without_pawns <= 1300:
             phase = PHASE_ENDGAME
-        elif board.ply() <= 20:
+        elif board.fullmove_number <= 10:
             phase = PHASE_OPENING
         else:
             phase = PHASE_MIDGAME

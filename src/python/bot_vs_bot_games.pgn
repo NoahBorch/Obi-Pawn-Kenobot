@@ -1,0 +1,14 @@
+[Event "Obi-Pawn Kenobot Game"]
+[Site "?"]
+[Date "????.??.??"]
+[Round "?"]
+[White "Obi-Pawn"]
+[Black "Human"]
+[Result "1-0"]
+[Depth "3"]
+[PositionsEvaluated "135333"]
+[LinesPruned "12089"]
+
+1. Nf3 Nf6 2. Ne5 Ne4 3. d3 Nc6 4. Nxc6 dxc6 5. dxe4 Qxd1+ 6. Kxd1 Bg4 7. Bf4 O-O-O+ 8. Nd2 e6 9. f3 Bh5 10. Be5 Bg6 11. Bf4 Be7 12. Be5 Rhg8 13. Bf4 Rd7 14. Be5 Kd8 15. Bf4 c5 16. Be5 c4 17. Kc1 Bg5 18. f4 Bxf4 19. Bxf4 e5 20. Bxe5 f6 21. Bc3 b5 22. Bb4 a5 23. Bxa5 Bh5 24. Bb4 Bg4 25. Rg1 f5 26. exf5 Bxf5 27. Rh1 c3 28. Bxc3 b4 29. Bxb4 Rd4 30. Bc3 Rf4 31. Be5 Rf2 32. Bg3 Rxf1+ 33. Rxf1 Rf8 34. Be5 Kd7 35. Bxg7 Rf7 36. Be5 Ke6 37. Nc4 Kd5 38. Rf4 Ke6 39. Bd4 Rd7 40. Ne5 Rd5 41. Kd2 Rd8 42. Kc3 Bxc2 43. Kxc2 Rd5 44. Rh4 h5 45. Kd3 c5 46. Re1 cxd4 47. Re4 Rxe5 48. Kxd4 Rxe4+ 49. Kxe4 h4 50. Rd1 Kf6 51. Rd6+ Ke7 52. Rh6 Kf7 53. Ke5 Kf8 54. Rh7 Ke8 55. Kd5 Kf8 56. Ke6 Kg8 57. Rxh4 Kf8 58. Rg4 Ke8 59. Rg8# 1-0
+
+#After quiescence search was added
