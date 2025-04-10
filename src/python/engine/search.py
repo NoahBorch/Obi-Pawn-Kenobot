@@ -1,7 +1,7 @@
 
 import chess
 
-from engine.evaluation import evaluate_position, MVV_LVA, add_check_bonus
+from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus
 from utils.counters import total_positions_evaluated, total_lines_pruned, curent_ply_positions_evaluated, curent_ply_lines_pruned, update_total_counters
 from utils.log import logger
 
