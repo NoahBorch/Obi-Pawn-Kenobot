@@ -1,3 +1,4 @@
+#main.py
 import chess
 import chess.pgn
 import random
@@ -11,6 +12,12 @@ from engine.search import find_best_move
 debug_main = debug_config["main"]
 
 depth = 5
+# ANSI escape codes
+RESET = "\033[0m"
+WHITE_PIECE = "\033[97m"  # Bright white
+BLACK_PIECE = "\033[96m"  # Bright cyan
+LIGHT_SQUARE = "\033[48;5;250m"  # Light gray
+DARK_SQUARE = "\033[48;5;240m"   # Dark gray
 
 def set_global_depth(new_depth):
     global depth
@@ -53,6 +60,12 @@ def parse_args():
         type=int,
         default=5,
         help="Set the search depth for the engine (default: 5)"
+    )
+
+    parser.add_argument(
+        "--color",
+        action="store_true",
+        help="Enable colored board output"
     )
 
     args = parser.parse_args()
@@ -106,6 +119,47 @@ def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
     logger.info(f"Time taken: {game.headers['Time']} seconds")
 
 
+
+def colored_square(square, piece):
+    is_light = (chess.square_rank(square) + chess.square_file(square)) % 2 == 0
+    bg_color = LIGHT_SQUARE if is_light else DARK_SQUARE
+
+    if piece:
+        fg_color = WHITE_PIECE if piece.color == chess.WHITE else BLACK_PIECE
+        return f"{bg_color}{fg_color} {piece.unicode_symbol()} {RESET}"
+    else:
+        return f"{bg_color}   {RESET}"  # Three spaces for better width
+
+def print_board_colored(board: chess.Board) -> str:
+    piece_map = board.piece_map()
+    rows = []
+    for rank in range(8, 0, -1):
+        row = f"{rank} "
+        for file in range(8):
+            square = chess.square(file, rank - 1)
+            piece = piece_map.get(square)
+            row += colored_square(square, piece) + " "
+        rows.append(row + RESET)
+    footer = "  " + " ".join("abcdefgh")
+    return "\n".join(rows) + "\n" + footer
+
+
+def print_board_clean(board: chess.Board) -> str:
+    # Use Unicode symbols and dots for empty squares
+    piece_map = board.piece_map()
+    rows = []
+    for rank in range(8, 0, -1):
+        row = []
+        for file in range(8):
+            square = chess.square(file, rank - 1)
+            piece = piece_map.get(square)
+            row.append(piece.unicode_symbol() if piece else '.')
+        rows.append(f"{rank} {' '.join(row)}")
+    board_str = "\n".join(rows)
+    board_str += "\n  a b c d e f g h"
+    return board_str
+
+
 def main():
     global total_positions_evaluated, total_lines_pruned, depth
     args, players_color = parse_args()
@@ -134,10 +188,11 @@ def main():
             game, node = create_pgn_game_and_node(chess.WHITE, depth)
 
             while not board.is_game_over():
-                logger.playing("\n" + str(board))
+                logger.playing(f"\n {print_board_colored(board) if args.color else print_board_clean(board)}")
+
                 move, eval = find_best_move(board, depth)
-                logger.playing(f"Obi-Pawn plays: {board.san(move)}")
-                logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. Score: {eval}")
+                logger.playing(f"{"White" if board.turn else "Black"} plays: {board.san(move)}")
+                logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. Score: {eval}")
                 board.push(move)
                 node = node.add_variation(move)
 
@@ -151,15 +206,22 @@ def main():
     elif players_color == "only_bot":
         logger.playing("Obi-Pawn Kenobot is playing against itself.")
         while not board.is_game_over():
-            logger.playing("\n" + str(board))
+            logger.playing(f"\n {print_board_colored(board) if args.color else print_board_clean(board)}")
+
             move, eval = find_best_move(board, depth)
-            logger.playing(f"Obi-Pawn plays: {board.san(move)}")
-            logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
+            logger.playing(f"{"White" if board.turn else "Black"}  plays: {board.san(move)}")
+            logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
             board.push(move)
             node = node.add_variation(move)
+
+            if board.is_game_over():
+                log_result(board)
+                add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
+                break
+        
     else:
         while not board.is_game_over():
-            logger.playing("\n" + str(board))
+            logger.playing(f"\n {print_board_colored(board) if args.color else print_board_clean(board)}")
 
             if board.turn == players_color:
                 move_input = input("Your move: ")
@@ -177,7 +239,7 @@ def main():
                 board.push(move)
                 node = node.add_variation(move)
                 logger.playing(f"Obi-Pawn plays: {move}")
-                logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
+                logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
     
     log_result(board)
 

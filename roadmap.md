@@ -23,12 +23,12 @@
     - [ ] king safety
 - [ ] Add clock-based time management (evaluate and move within X milliseconds)
 - [ ] Add support for loading board states from FEN for easier testing
-- [ ] Add PGN generation to store game history
+- [x] Add PGN generation to store game history
 
 ## 🌐 Phase 3: Lichess Integration
 **Goal:** Play games online through Lichess bots API
 
-- [ ] Register a bot account on Lichess and generate a personal API token
+- [x] Register a bot account on Lichess and generate a personal API token
 - [ ] Install `berserk` or `lichess-bot` library to interface with the Lichess API
 - [ ] Set up API authentication using the token
 - [ ] Poll for challenges using the API
