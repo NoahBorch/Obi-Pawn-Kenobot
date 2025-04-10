@@ -2,8 +2,10 @@
 import chess
 
 from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus
-from utils.counters import total_positions_evaluated, total_lines_pruned, curent_ply_positions_evaluated, curent_ply_lines_pruned, update_total_counters
-from utils.log import logger
+from utils.counters import update_total_counters
+from utils.log import logger, debug_config
+
+debug_search = debug_config["search"]
 
 
 def select_single_move(board, color=chess.BLACK, best_move=None, best_eval=None):
@@ -61,9 +63,12 @@ def order_moves(board):
             captures.append(move)
         else:
             non_captures.append(move)
+            
+    if debug_search:
+        logger.debug(f"Ordering moves: {len(promotions)} promotions, {len(captures)} captures, {len(checks)} checks, {len(non_captures)} non-captures")
+        logger.debug(f"Promotions: {len(promotions)}, Captures: {len(captures)}, Checks: {len(checks)}, Non-captures: {len(non_captures)}")
+        logger.debug(f"All captures: {captures}")
 
-    #logger.debug(f"Promotions: {len(promotions)}, Captures: {len(captures)}, Checks: {len(checks)}, Non-captures: {len(non_captures)}")
-    #logger.debug(f"All captures: {captures}")
     #Sort captures by MVV - LVA
     captures.sort(key=lambda x: MVV_LVA(board, x) + add_check_bonus(board,x,check_bonus), reverse=True)
     return promotions + captures + checks + non_captures

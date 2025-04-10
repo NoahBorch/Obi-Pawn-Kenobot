@@ -2,7 +2,6 @@
 
 import chess
 from utils.log import logger, debug_config
-from utils.counters import ply_counter
 from engine.evaluation.PSTs import get_piece_square_tables_by_phase, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
 
 
@@ -97,14 +96,14 @@ def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns)
     :param opponent_material_count_without_pawns: The material count of the opponent without pawns
     :return: A score representing the evaluation of the position.
     """
-    global ply_counter, last_logged_phase
+    global last_logged_phase
     all_pieces = board.piece_map().items()
     current_eval = 0
 
     if last_logged_phase != PHASE_ENDGAME:
         if opponent_material_count_without_pawns <= 1300:
             phase = PHASE_ENDGAME
-        elif ply_counter <= 20:
+        elif board.ply() <= 20:
             phase = PHASE_OPENING
         else:
             phase = PHASE_MIDGAME
@@ -125,7 +124,12 @@ def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns)
         logger.debug(f"Current PST score: {current_eval}")
     return current_eval
 
-
+def endgame_incentives(board):
+    white_king_square = board.king(chess.WHITE)
+    black_king_square = board.king(chess.BLACK)
+    distance_between_kings = chess.square_distance(white_king_square, black_king_square)
+    bonus = 50 - distance_between_kings
+    return bonus 
 
 
 
@@ -152,6 +156,10 @@ def evaluate_position(board):
             PST_eval_score = add_piece_square_table_bonuses(board, white_material_count_no_pawns)
 
         current_eval += PST_eval_score
+
+        if last_logged_phase == PHASE_ENDGAME:
+            current_eval += endgame_incentives(board)
+
         if debug_evaluation:
             logger.debug(f"Current evaluation score: {current_eval if turn else -current_eval}")
         return current_eval if turn else -current_eval

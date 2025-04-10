@@ -10,11 +10,19 @@ total_positions_evaluated = 0
 total_lines_pruned = 0
 curent_ply_positions_evaluated = 0
 curent_ply_lines_pruned = 0
-ply_counter = 0
+
 
 def get_total_counters():
     global total_positions_evaluated, total_lines_pruned
     return total_positions_evaluated, total_lines_pruned
+
+def reset_total_counters():
+    global total_positions_evaluated, total_lines_pruned, curent_ply_positions_evaluated, curent_ply_lines_pruned
+    total_positions_evaluated = 0
+    total_lines_pruned = 0
+    curent_ply_positions_evaluated = 0
+    curent_ply_lines_pruned = 0
+    logger.debug("Counters reset")
 
 if not debug_counter:
     def update_total_counters(positions_evaluated, lines_pruned, reset_ply=False):
@@ -53,4 +61,3 @@ else:
             logger.info(f"Positions evaluated to find this move: {curent_ply_positions_evaluated}, Lines pruned: {curent_ply_lines_pruned}")
             curent_ply_positions_evaluated = 0
             curent_ply_lines_pruned = 0
-            ply_counter += 1

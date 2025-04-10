@@ -1,8 +1,9 @@
 import chess
+import chess.pgn
 import random
 import argparse
-from utils.log import logger, configure_logging, debug_config
-from utils.counters import get_total_counters
+from utils.log import logger, configure_logging, debug_config, log_result
+from utils.counters import get_total_counters, reset_total_counters
 from engine.search import find_best_move
 
 debug_main = debug_config["main"]
@@ -29,6 +30,12 @@ def parse_args():
         default="choose_later",
     )
 
+    parser.add_argument(
+    "--selfplay-loop",
+    action="store_true",
+    help="Enable infinite bot vs bot self-play loop mode"
+    )
+
     args = parser.parse_args()
     # if no argument is passed, set default to "choose_later"
     if args.player == "choose_later":
@@ -52,18 +59,7 @@ def parse_args():
 def get_log_level(args):
     return "playing" if args.play else args.log
 
-def log_result(board):
 
-    logger.playing(f"Game Over: {board.result()}")
-    logger.playing("Final Position:\n" + str(board))
-    if board.result() == "1-0":
-        logger.playing("White won!")
-    elif board.result() == "0-1":
-        logger.playing("Black won!")
-    else:
-        logger.playing("It's a draw!")
-    total_positions_evaluated, total_lines_pruned = get_total_counters()
-    logger.info(f"Positions evaluated: {total_positions_evaluated} | Lines pruned: {total_lines_pruned}")
     
 def main():
     global total_positions_evaluated, total_lines_pruned
@@ -71,13 +67,55 @@ def main():
     # Configure logging based on user selection
     configure_logging(get_log_level(args))
 
-
     board = chess.Board()
-    depth = 4
+    depth = 3
     logger.playing("Welcome to Obi-Pawn Kenobot! Let's play.")
     logger.playing("You are playing as " + ("White" if players_color == chess.WHITE else "Black"))
 
-    if players_color == "only_bot":
+    #PGN
+    game = chess.pgn.Game()
+    game.headers["Event"] = "Obi-Pawn Kenobot Game"
+    game.headers["White"] = "Human" if players_color == chess.WHITE else "Obi-Pawn"
+    game.headers["Black"] = "Obi-Pawn" if players_color == chess.WHITE else "Human"
+    game.headers["Depth"] = str(depth)
+    node = game
+
+ 
+    if players_color == "only_bot" and args.selfplay_loop:
+        logger.playing("Obi-Pawn Kenobot is playing against itself (loop mode).")
+        while True:
+            board = chess.Board()
+
+            game = chess.pgn.Game()
+            game.headers["Event"] = "Obi-Pawn Kenobot Self-Play"
+            game.headers["White"] = "Obi-Pawn"
+            game.headers["Black"] = "Obi-Pawn"
+            game.headers["Depth"] = str(depth)
+            node = game
+
+            while not board.is_game_over():
+                logger.playing("\n" + str(board))
+                move, eval = find_best_move(board, depth)
+                logger.playing(f"Obi-Pawn plays: {board.san(move)}")
+                logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. Score: {eval}")
+                board.push(move)
+                node = node.add_variation(move)
+
+            log_result(board)
+
+            counters = get_total_counters()
+            game.headers["PositionsEvaluated"] = str(counters[0])
+            game.headers["LinesPruned"] = str(counters[1])
+            game.headers["Result"] = board.result()
+
+            with open("bot_vs_bot_games.pgn", "a") as pgn_file:
+                print(game, file=pgn_file, end="\n\n")
+
+            logger.info("Game finished and appended to PGN. Starting new game...\n")
+            reset_total_counters()
+            
+
+    elif players_color == "only_bot":
         logger.playing("Obi-Pawn Kenobot is playing against itself.")
         while not board.is_game_over():
             logger.playing("\n" + str(board))
@@ -85,26 +123,47 @@ def main():
             logger.playing(f"Obi-Pawn plays: {board.san(move)}")
             logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
             board.push(move)
-        log_result(board)
-        return
+            node = node.add_variation(move)
+    else:
+        while not board.is_game_over():
+            logger.playing("\n" + str(board))
 
-    while not board.is_game_over():
-        logger.playing("\n" + str(board))
-
-        if board.turn == players_color:
-            move = input("Your move: ")
-            try:
-                board.push_uci(move)
-            except ValueError:
-                logger.warning("Invalid move format or illegal move. Try again.")
-                continue
-        else:
-            move, eval = find_best_move(board, depth)
-            board.push(move)
-            logger.playing(f"Obi-Pawn plays: {move}")
-            logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
-
+            if board.turn == players_color:
+                move_input = input("Your move: ")
+                try:
+                    uci_move = chess.Move.from_uci(move_input)
+                    if uci_move not in board.legal_moves: 
+                        raise ValueError
+                    board.push(uci_move)
+                    node = node.add_variation(uci_move)
+                except ValueError:
+                    logger.warning("Invalid move format or illegal move. Try again.")
+                    continue
+            else:
+                move, eval = find_best_move(board, depth)
+                board.push(move)
+                node = node.add_variation(move)
+                logger.playing(f"Obi-Pawn plays: {move}")
+                logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
+    
     log_result(board)
+
+    counters = get_total_counters()
+    game.headers["PositionsEvaluated"] = str(counters[0])
+    game.headers["LinesPruned"] = str(counters[1])
+    game.headers["Result"] = board.result()
+
+    if players_color == "only_bot":
+        pgn_filename = "bot_vs_bot_games.pgn"
+    else:
+        pgn_filename = "bot_vs_human_games.pgn"
+
+    with open(pgn_filename, "a") as pgn_file:
+        print(game, file=pgn_file, end="\n\n")  # ensure proper spacing between games
+
+    logger.info(f"Game PGN appended to {pgn_filename}")
+
+
     
 
 

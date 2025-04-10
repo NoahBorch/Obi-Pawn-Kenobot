@@ -43,9 +43,9 @@
 - [ ] Import or create an opening book (e.g., .bin or .pgn of known openings)
 - [ ] Integrate book lookups in early moves
 - [ ] Implement a transposition table (hashing)
-- [ ] Add basic move ordering (captures, checks first)
+- [x] Add basic move ordering (captures, checks first)
 - [ ] Integrate iterative deepening to manage depth dynamically
-- [ ] Add logging for nodes searched, time taken, evaluation scores
+- [x] Add logging for nodes searched, time taken, evaluation scores
 
 ## ⚙️ Phase 5: Partial Custom Engine
 **Goal:** Replace parts of `python-chess` with your own logic

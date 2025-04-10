@@ -1,5 +1,6 @@
 import logging
 
+
 # Custom level: Between DEBUG (10) and INFO (20)
 PLAYING_VERBOSE_LEVEL = 25
 logging.addLevelName(PLAYING_VERBOSE_LEVEL, "PLAYING")
@@ -51,3 +52,19 @@ def configure_logging(level_str: str = "info"):
         playing_handler.setFormatter(playing_formatter)
         playing_handler.addFilter(PlayingFilter())
         logger.addHandler(playing_handler)
+
+def log_result(board):
+    from utils.counters import get_total_counters
+    
+    logger.playing(f"Game Over: {board.result()}")
+    logger.playing("Final Position:\n" + str(board))
+    if board.result() == "1-0":
+        logger.playing("White won!")
+    elif board.result() == "0-1":
+        logger.playing("Black won!")
+    else:
+        logger.playing("It's a draw!")
+    total_positions_evaluated, total_lines_pruned = get_total_counters()
+    logger.info(f"Positions evaluated: {total_positions_evaluated} | Lines pruned: {total_lines_pruned}")
+    logger.info("Thank you for playing!")
+
