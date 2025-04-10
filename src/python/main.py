@@ -18,6 +18,22 @@ WHITE_PIECE = "\033[97m"  # Bright white
 BLACK_PIECE = "\033[96m"  # Bright cyan
 LIGHT_SQUARE = "\033[48;5;250m"  # Light gray
 DARK_SQUARE = "\033[48;5;240m"   # Dark gray
+UNICODE_PIECES = {
+    (chess.PAWN, False):   '♙',
+    (chess.KNIGHT, False): '♘',
+    (chess.BISHOP, False): '♗',
+    (chess.ROOK, False):   '♖',
+    (chess.QUEEN, False):  '♕',
+    (chess.KING, False):   '♔',
+    (chess.PAWN, True):    '♟',
+    (chess.KNIGHT, True):  '♞',
+    (chess.BISHOP, True):  '♝',
+    (chess.ROOK, True):    '♜',
+    (chess.QUEEN, True):   '♛',
+    (chess.KING, True):    '♚',
+}
+
+
 
 def set_global_depth(new_depth):
     global depth
@@ -123,12 +139,12 @@ def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
 def colored_square(square, piece):
     is_light = (chess.square_rank(square) + chess.square_file(square)) % 2 == 0
     bg_color = LIGHT_SQUARE if is_light else DARK_SQUARE
-
     if piece:
+        symbol = UNICODE_PIECES[(piece.piece_type, piece.color)]
         fg_color = WHITE_PIECE if piece.color == chess.WHITE else BLACK_PIECE
-        return f"{bg_color}{fg_color} {piece.unicode_symbol()} {RESET}"
+        return f"{bg_color}{fg_color} {symbol} {RESET}"
     else:
-        return f"{bg_color}   {RESET}"  # Three spaces for better width
+        return f"{bg_color}   {RESET}"
 
 def print_board_colored(board: chess.Board) -> str:
     piece_map = board.piece_map()
@@ -145,7 +161,6 @@ def print_board_colored(board: chess.Board) -> str:
 
 
 def print_board_clean(board: chess.Board) -> str:
-    # Use Unicode symbols and dots for empty squares
     piece_map = board.piece_map()
     rows = []
     for rank in range(8, 0, -1):
@@ -153,7 +168,10 @@ def print_board_clean(board: chess.Board) -> str:
         for file in range(8):
             square = chess.square(file, rank - 1)
             piece = piece_map.get(square)
-            row.append(piece.unicode_symbol() if piece else '.')
+            if piece:
+                row.append(UNICODE_PIECES[(piece.piece_type, piece.color)])
+            else:
+                row.append('.')
         rows.append(f"{rank} {' '.join(row)}")
     board_str = "\n".join(rows)
     board_str += "\n  a b c d e f g h"
