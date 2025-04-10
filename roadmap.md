@@ -19,6 +19,8 @@
 - [x] Add alpha-beta pruning to reduce unnecessary branches
 - [x] Implement move ordering
 - [ ] Improve evaluation function with basic heuristics (e.g., piece-square tables, king safety)
+    - [x] piece-square tables
+    - [ ] king safety
 - [ ] Add clock-based time management (evaluate and move within X milliseconds)
 - [ ] Add support for loading board states from FEN for easier testing
 - [ ] Add PGN generation to store game history

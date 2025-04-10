@@ -2,7 +2,7 @@
 import chess
 
 from engine.evaluation import evaluate_position, MVV_LVA, add_check_bonus
-from utils.counters import positions_evaluated, lines_pruned
+from utils.counters import total_positions_evaluated, total_lines_pruned, curent_ply_positions_evaluated, curent_ply_lines_pruned, update_total_counters
 from utils.log import logger
 
 
@@ -61,8 +61,9 @@ def order_moves(board):
             captures.append(move)
         else:
             non_captures.append(move)
-    logger.debug(f"Promotions: {len(promotions)}, Captures: {len(captures)}, Checks: {len(checks)}, Non-captures: {len(non_captures)}")
-    logger.debug(f"All captures: {captures}")
+
+    #logger.debug(f"Promotions: {len(promotions)}, Captures: {len(captures)}, Checks: {len(checks)}, Non-captures: {len(non_captures)}")
+    #logger.debug(f"All captures: {captures}")
     #Sort captures by MVV - LVA
     captures.sort(key=lambda x: MVV_LVA(board, x) + add_check_bonus(board,x,check_bonus), reverse=True)
     return promotions + captures + checks + non_captures
@@ -80,8 +81,7 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     :return: The evaluation score of the best move
     """
 
-    global positions_evaluated, lines_pruned
-
+    
     if depth == 0 or board.outcome():
         return evaluate_position(board)
     
@@ -89,6 +89,7 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     max_eval = -float('inf')
 
     local_positions_evaluated = 0
+    local_lines_pruned = 0
     for move in ordered_moves:
         local_positions_evaluated += 1
         board.push(move)
@@ -99,22 +100,26 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
             max_eval = eval
         alpha = max(alpha, eval)
         if alpha >= beta:
-            lines_pruned += 1
+            local_lines_pruned += 1
             break 
 
-    positions_evaluated += local_positions_evaluated
-
+    update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
     return max_eval
 
 def find_best_move(board, depth):
-    global positions_evaluated, lines_pruned
+    if not board.legal_moves:
+        logger.info("No legal moves available.")
+        return None, 0
+
     best_move = None
     max_eval = -float('inf')
     alpha = -float('inf')
     beta = float('inf')
+    local_positions_evaluated = 0
+    local_lines_pruned = 0
 
-    for move in board.legal_moves:
-        positions_evaluated += 1
+    for move in order_moves(board):
+        local_positions_evaluated += 1
         board.push(move)
         eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
         board.pop()
@@ -125,9 +130,11 @@ def find_best_move(board, depth):
 
         alpha = max(alpha, eval)
         if alpha >= beta:
-            lines_pruned += 1
+            local_lines_pruned += 1
             break  
-
+    logger.info(f"Best move: {best_move}, Evaluation: {max_eval}")
+    update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=True)
+    
     return best_move, max_eval
 
 
