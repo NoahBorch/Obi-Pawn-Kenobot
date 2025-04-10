@@ -67,9 +67,8 @@ def quiescence_search(board, qDepth, alpha, beta):
 
     if board.outcome() or qDepth == 0:
         return max_eval
-    if board.fullmove_number >= 70:
-        if board.is_game_over(claim_draw=True):
-            return -1
+    elif (board.can_claim_threefold_repetition() or board.can_claim_fifty_moves()):
+        return -1
     if max_eval >= beta:
         return beta
     if max_eval > alpha:
@@ -111,9 +110,9 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     
     if board.outcome():
         return evaluate_position(board)
-    if board.fullmove_number >= 70:
-        if board.is_game_over(claim_draw=True):
-            return -1
+    elif (board.can_claim_threefold_repetition() or board.can_claim_fifty_moves()):
+        return -1
+    
     elif depth == 0:
         from main import get_global_depth
         qDepth = get_global_depth() // 2 + 2
