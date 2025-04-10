@@ -1,8 +1,13 @@
 
 
 import chess
-from utils.log import logger
+from utils.log import logger, debug_config
+from utils.counters import ply_counter
 
+debug_evaluation = debug_config["evaluation"]
+
+midgame = False
+endgame = False
 
 
 piece_value = {
@@ -13,95 +18,117 @@ piece_value = {
     chess.QUEEN: 900,
     chess.KING: 0,
 }
+# Define all correctly-oriented PSTs as Python lists from rank 1 to rank 8
+PAWN_OPENING_TABLE = [
+     0,  0,  0,  0,  0,  0,  0,  0,
+    50, 50, 40, 35, 35, 40, 50, 50,
+    10, 10, 30, 35, 35, 30, 10, 10,
+     5,  5, 10, 35, 35, 10,  5,  5,
+     0,  0,  0, 20, 20,  0,  0,  0,
+     5, -5,-10,  0,  0,-10, -5,  5,
+     5, 10, 10,-20,-20, 10, 10,  5,
+     0,  0,  0,  0,  0,  0,  0,  0
+]
 
 PAWN_TABLE = [
      0,  0,  0,  0,  0,  0,  0,  0,
-     5, 10, 10,-20,-20, 10, 10,  5,
-     5, -5,-10,  0,  0,-10, -5,  5,
-     0,  0,  0, 20, 20,  0,  0,  0,
-     5,  5, 10, 25, 25, 10,  5,  5,
-    10, 10, 20, 30, 30, 20, 10, 10,
     50, 50, 50, 50, 50, 50, 50, 50,
+    10, 10, 20, 30, 30, 20, 10, 10,
+     5,  5, 10, 25, 25, 10,  5,  5,
+     0,  0,  0, 20, 20,  0,  0,  0,
+     5, -5,-10,  0,  0,-10, -5,  5,
+     5, 10, 10,-20,-20, 10, 10,  5,
+     0,  0,  0,  0,  0,  0,  0,  0
+]
+
+PAWN_END_TABLE = [
+     0,  0,  0,  0,  0,  0,  0,  0,
+    50, 50, 50, 60, 60, 50, 50, 50,
+    10, 10, 30, 35, 35, 30, 10, 10,
+     5,  5, 15, 25, 25, 15,  5,  5,
+     0,  0, 10, 20, 20, 10,  0,  0,
+     5,  5,  5,  5,  5,  5,  5,  5,
+    10, 10, 10,-10,-10, 10, 10, 10,
      0,  0,  0,  0,  0,  0,  0,  0
 ]
 
 KNIGHT_TABLE = [
-    -50,-40,-30,-30,-30,-30,-40,-50,
-    -40,-20,  0,  0,  0,  0,-20,-40,
-    -30,  0, 10, 15, 15, 10,  0,-30,
-    -30,  5, 15, 20, 20, 15,  5,-30,
-    -30,  0, 15, 20, 20, 15,  0,-30,
-    -30,  5, 10, 15, 15, 10,  5,-30,
-    -40,-20,  0,  5,  5,  0,-20,-40,
-    -50,-40,-30,-30,-30,-30,-40,-50
+   -50,-40,-30,-30,-30,-30,-40,-50,
+   -40,-20,  0,  5,  5,  0,-20,-40,
+   -30,  5, 10, 15, 15, 10,  5,-30,
+   -30,  0, 15, 20, 20, 15,  0,-30,
+   -30,  5, 15, 20, 20, 15,  5,-30,
+   -30,  0, 10, 15, 15, 10,  0,-30,
+   -40,-20,  0,  0,  0,  0,-20,-40,
+   -50,-40,-30,-30,-30,-30,-40,-50
 ]
 
 BISHOP_TABLE = [
-    -20,-10,-10,-10,-10,-10,-10,-20,
-    -10,  0,  0,  0,  0,  0,  0,-10,
-    -10,  0,  5, 10, 10,  5,  0,-10,
-    -10,  5,  5, 10, 10,  5,  5,-10,
-    -10,  0, 10, 10, 10, 10,  0,-10,
-    -10, 10, 10, 10, 10, 10, 10,-10,
-    -10,  5,  0,  0,  0,  0,  5,-10,
-    -20,-10,-10,-10,-10,-10,-10,-20
+   -20,-10,-10,-10,-10,-10,-10,-20,
+   -10,  5,  0,  0,  0,  0,  5,-10,
+   -10,  0, 10, 10, 10, 10,  0,-10,
+   -10, 10, 10, 10, 10, 10, 10,-10,
+   -10,  0, 10, 10, 10, 10,  0,-10,
+   -10,  5,  5, 10, 10,  5,  5,-10,
+   -10,  0,  5, 10, 10,  5,  0,-10,
+   -20,-10,-10,-10,-10,-10,-10,-20
+]
+
+ROOK_OPENING_TABLE = [
+     0,  0,  0,  2,  2,  0,  0,  0,
+    -5, -2, -2,  0,  0, -2, -2, -5,
+    -5, -5, -5, -5, -5, -5, -5, -5,
+    -5, -5, -5, -5, -5, -5, -5, -5,
+     0,  0,  5, 10, 10,  5,  0,  0,
+     5, 10, 15, 20, 20, 15, 10,  5,
+     0,  0,  0,  0,  0,  0,  0,  0,
+     0,  0,  0,  0,  0,  0,  0,  0
 ]
 
 ROOK_TABLE = [
-     0,  0,  0,  0,  0,  0,  0,  0,
+     1,  0,  0,  5,  5,  0,  0,  1,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
+    -5,  0,  0,  0,  0,  0,  0, -5,
      5, 10, 10, 10, 10, 10, 10,  5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-    -5,  0,  0,  0,  0,  0,  0, -5,
-     0,  0,  0,  5,  5,  0,  0,  0
+     0,  0,  0,  0,  0,  0,  0,  0
 ]
 
 QUEEN_TABLE = [
-    -20,-10,-10, -5, -5,-10,-10,-20,
-    -10,  0,  0,  0,  0,  0,  0,-10,
-    -10,  0,  5,  5,  5,  5,  0,-10,
-     -5,  0,  5,  5,  5,  5,  0, -5,
-      0,  0,  5,  5,  5,  5,  0, -5,
-    -10,  5,  5,  5,  5,  5,  0,-10,
-    -10,  0,  5,  0,  0,  0,  0,-10,
-    -20,-10,-10, -5, -5,-10,-10,-20
+   -20,-10,-10, -5, -5,-10,-10,-20,
+   -10,  0,  5,  0,  0,  0,  0,-10,
+   -10,  0,  5,  5,  5,  5,  0,-10,
+    -5,  0,  5,  5,  5,  5,  0, -5,
+     0,  0,  5,  5,  5,  5,  0, -5,
+   -10,  0,  5,  5,  5,  5,  0,-10,
+   -10,  0,  0,  0,  0,  0,  0,-10,
+   -20,-10,-10, -5, -5,-10,-10,-20
 ]
 
 KING_MID_TABLE = [
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -30,-40,-40,-50,-50,-40,-40,-30,
-    -20,-30,-30,-40,-40,-30,-30,-20,
-    -10,-20,-20,-20,-20,-20,-20,-10,
-     20, 20,  0,  0,  0,  0, 20, 20,
-     20, 30, 10,  0,  0, 10, 30, 20
+    20, 30, 10,  0,  0, 10, 30, 20,
+    20, 20,  0,  0,  0,  0, 20, 20,
+   -10,-20,-20,-20,-20,-20,-20,-10,
+   -20,-30,-30,-40,-40,-30,-30,-20,
+   -30,-40,-40,-50,-50,-40,-40,-30,
+   -30,-40,-40,-50,-50,-40,-40,-30,
+   -30,-40,-40,-50,-50,-40,-40,-30,
+   -30,-40,-40,-50,-50,-40,-40,-30
 ]
 
 KING_END_TABLE = [
-    -50,-40,-30,-20,-20,-30,-40,-50,
-    -30,-20,-10,  0,  0,-10,-20,-30,
-    -30,-10, 20, 30, 30, 20,-10,-30,
-    -30,-10, 30, 40, 40, 30,-10,-30,
-    -30,-10, 30, 40, 40, 30,-10,-30,
-    -30,-10, 20, 30, 30, 20,-10,-30,
-    -30,-30,  0,  0,  0,  0,-30,-30,
-    -50,-30,-30,-30,-30,-30,-30,-50
+   -50,-30,-30,-30,-30,-30,-30,-50,
+   -30,-30,  0,  0,  0,  0,-30,-30,
+   -30,-10, 20, 30, 30, 20,-10,-30,
+   -30,-10, 30, 40, 40, 30,-10,-30,
+   -30,-10, 30, 40, 40, 30,-10,-30,
+   -30,-10, 20, 30, 30, 20,-10,-30,
+   -30,-20,-10,  0,  0,-10,-20,-30,
+   -50,-40,-30,-20,-20,-30,-40,-50
 ]
 
-
-PAWN_END_TABLE = [
-     0,  0,  0,  0,  0,  0,  0,  0,
-    10, 10, 10,-10,-10, 10, 10, 10,
-     5,  5,  5,  5,  5,  5,  5,  5,
-     0,  0, 10, 20, 20, 10,  0,  0,
-     5,  5, 15, 25, 25, 15,  5,  5,
-    10, 10, 30, 35, 35, 30, 10, 10,
-    50, 50, 50, 60, 60, 50, 50, 50,
-     0,  0,  0,  0,  0,  0,  0,  0
-]
 
 def MVV_LVA(board, move):
     """
@@ -159,9 +186,14 @@ def count_material(board):
             if piece.piece_type == chess.PAWN:
                 white_pawn_material_score += 100
         else:
-            black_material_score -= piece_value[piece.piece_type]
+            black_material_score += piece_value[piece.piece_type]
             if piece.piece_type == chess.PAWN:
-                black_pawn_material_score -= 100
+                black_pawn_material_score += 100
+    if debug_evaluation:
+        logger.debug(f"material count score: {white_material_score - black_material_score}")
+        logger.debug(f"white material no pawns score: {white_material_score-black_material_score-white_pawn_material_score+black_pawn_material_score}")
+        logger.debug(f"black material no pawns score: {black_material_score-white_material_score+white_pawn_material_score-black_pawn_material_score}")
+  
     return (white_material_score - black_material_score), (white_material_score-white_pawn_material_score), (black_material_score-black_pawn_material_score)
 
 
@@ -172,41 +204,111 @@ def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns)
     :param opponent_material_count_without_pawns: The material count of the opponent without pawns
     :return: A score representing the evaluation of the position.
     """
+    global endgame, midgame, ply_counter
     all_pieces = board.piece_map().items()
     current_eval = 0
-    if opponent_material_count_without_pawns <= 1300:
-        #if endgame
+
+    if midgame == False:
+        if ply_counter >= 20:
+            midgame = True
+            logger.info("Midgame reached")
+            logger.debug("Midgame PSTs activated")
+
+    elif endgame == False:
+        if opponent_material_count_without_pawns <= 1300:
+            endgame = True
+            logger.info("Endgame reached")
+            logger.debug("Endgame PSTs activated")
+
+    if endgame:
         for square, piece in all_pieces:
             if not piece.color:
                 square = chess.square_mirror(square)
-            if piece.piece_type == chess.PAWN:
-                current_eval += PAWN_END_TABLE[square]
-            elif piece.piece_type == chess.KNIGHT:
-                current_eval += KNIGHT_TABLE[square]
-            elif piece.piece_type == chess.BISHOP:
-                current_eval += BISHOP_TABLE[square]
-            elif piece.piece_type == chess.ROOK:
-                current_eval += ROOK_TABLE[square]
-            elif piece.piece_type == chess.QUEEN:
-                current_eval += QUEEN_TABLE[square]
-            elif piece.piece_type == chess.KING:
-                current_eval += KING_END_TABLE[square]
+                if piece.piece_type == chess.PAWN:
+                    current_eval -= PAWN_END_TABLE[square]
+                elif piece.piece_type == chess.KNIGHT:
+                    current_eval -= KNIGHT_TABLE[square]
+                elif piece.piece_type == chess.BISHOP:
+                    current_eval -= BISHOP_TABLE[square]
+                elif piece.piece_type == chess.ROOK:
+                    current_eval -= ROOK_TABLE[square]
+                elif piece.piece_type == chess.QUEEN:
+                    current_eval -= QUEEN_TABLE[square]
+                elif piece.piece_type == chess.KING:
+                    current_eval -= KING_END_TABLE[square]   
+            else:
+                if piece.piece_type == chess.PAWN:
+                    current_eval += PAWN_END_TABLE[square]
+                elif piece.piece_type == chess.KNIGHT:
+                    current_eval += KNIGHT_TABLE[square]
+                elif piece.piece_type == chess.BISHOP:
+                    current_eval += BISHOP_TABLE[square]
+                elif piece.piece_type == chess.ROOK:
+                    current_eval += ROOK_TABLE[square]
+                elif piece.piece_type == chess.QUEEN:
+                    current_eval += QUEEN_TABLE[square]
+                elif piece.piece_type == chess.KING:
+                    current_eval += KING_END_TABLE[square]
+    elif midgame:
+        for square, piece in all_pieces:
+            if not piece.color:
+                square = chess.square_mirror(square)
+                if piece.piece_type == chess.PAWN:
+                    current_eval -= PAWN_TABLE[square]
+                elif piece.piece_type == chess.KNIGHT:
+                    current_eval -= KNIGHT_TABLE[square]
+                elif piece.piece_type == chess.BISHOP:
+                    current_eval -= BISHOP_TABLE[square]
+                elif piece.piece_type == chess.ROOK:
+                    current_eval -= ROOK_TABLE[square]
+                elif piece.piece_type == chess.QUEEN:
+                    current_eval -= QUEEN_TABLE[square]
+                elif piece.piece_type == chess.KING:
+                    current_eval -= KING_MID_TABLE[square]
+            else:
+                if piece.piece_type == chess.PAWN:
+                    current_eval += PAWN_TABLE[square]
+                elif piece.piece_type == chess.KNIGHT:
+                    current_eval += KNIGHT_TABLE[square]
+                elif piece.piece_type == chess.BISHOP:
+                    current_eval += BISHOP_TABLE[square]
+                elif piece.piece_type == chess.ROOK:
+                    current_eval += ROOK_TABLE[square]
+                elif piece.piece_type == chess.QUEEN:
+                    current_eval += QUEEN_TABLE[square]
+                elif piece.piece_type == chess.KING:
+                    current_eval += KING_MID_TABLE[square]
     else:
         for square, piece in all_pieces:
             if not piece.color:
                 square = chess.square_mirror(square)
-            if piece.piece_type == chess.PAWN:
-                current_eval += PAWN_TABLE[square]
-            elif piece.piece_type == chess.KNIGHT:
-                current_eval += KNIGHT_TABLE[square]
-            elif piece.piece_type == chess.BISHOP:
-                current_eval += BISHOP_TABLE[square]
-            elif piece.piece_type == chess.ROOK:
-                current_eval += ROOK_TABLE[square]
-            elif piece.piece_type == chess.QUEEN:
-                current_eval += QUEEN_TABLE[square]
-            elif piece.piece_type == chess.KING:
-                current_eval += KING_MID_TABLE[square]
+                if piece.piece_type == chess.PAWN:
+                    current_eval -= PAWN_OPENING_TABLE[square]
+                elif piece.piece_type == chess.KNIGHT:
+                    current_eval -= KNIGHT_TABLE[square]
+                elif piece.piece_type == chess.BISHOP:
+                    current_eval -= BISHOP_TABLE[square]
+                elif piece.piece_type == chess.ROOK:
+                    current_eval -= ROOK_TABLE[square]
+                elif piece.piece_type == chess.QUEEN:
+                    current_eval -= QUEEN_TABLE[square]
+                elif piece.piece_type == chess.KING:
+                    current_eval -= KING_MID_TABLE[square]
+            else:
+                if piece.piece_type == chess.PAWN:
+                    current_eval += PAWN_OPENING_TABLE[square]
+                elif piece.piece_type == chess.KNIGHT:
+                    current_eval += KNIGHT_TABLE[square]
+                elif piece.piece_type == chess.BISHOP:
+                    current_eval += BISHOP_TABLE[square]
+                elif piece.piece_type == chess.ROOK:
+                    current_eval += ROOK_TABLE[square]
+                elif piece.piece_type == chess.QUEEN:
+                    current_eval += QUEEN_TABLE[square]
+                elif piece.piece_type == chess.KING:
+                    current_eval += KING_MID_TABLE[square]
+    if debug_evaluation:
+        logger.debug(f"Current PST score: {current_eval}")
     return current_eval
 
 
@@ -234,6 +336,8 @@ def evaluate_position(board):
             PST_eval_score = add_piece_square_table_bonuses(board, black_material_count_no_pawns)
         else:
             PST_eval_score = add_piece_square_table_bonuses(board, white_material_count_no_pawns)
-            
+
         current_eval += PST_eval_score
+        if debug_evaluation:
+            logger.debug(f"Current evaluation score: {current_eval if turn else -current_eval}")
         return current_eval if turn else -current_eval

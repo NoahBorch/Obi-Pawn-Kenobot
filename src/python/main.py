@@ -1,10 +1,11 @@
 import chess
 import random
 import argparse
-from utils.log import logger, configure_logging
-from utils.counters import total_positions_evaluated, total_lines_pruned
-from engine.evaluation import evaluate_position
+from utils.log import logger, configure_logging, debug_config
+from utils.counters import get_total_counters
 from engine.search import find_best_move
+
+debug_main = debug_config["main"]
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Play a game against Obi-Pawn Kenobot")
@@ -52,7 +53,7 @@ def get_log_level(args):
     return "playing" if args.play else args.log
 
 def log_result(board):
-    global total_positions_evaluated, total_lines_pruned
+
     logger.playing(f"Game Over: {board.result()}")
     logger.playing("Final Position:\n" + str(board))
     if board.result() == "1-0":
@@ -61,6 +62,7 @@ def log_result(board):
         logger.playing("Black won!")
     else:
         logger.playing("It's a draw!")
+    total_positions_evaluated, total_lines_pruned = get_total_counters()
     logger.info(f"Positions evaluated: {total_positions_evaluated} | Lines pruned: {total_lines_pruned}")
     
 def main():
@@ -71,7 +73,7 @@ def main():
 
 
     board = chess.Board()
-    depth = 3
+    depth = 4
     logger.playing("Welcome to Obi-Pawn Kenobot! Let's play.")
     logger.playing("You are playing as " + ("White" if players_color == chess.WHITE else "Black"))
 
@@ -84,7 +86,6 @@ def main():
             logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
             board.push(move)
         log_result(board)
-        logger.info(f"Positions evaluated: {total_positions_evaluated} | Lines pruned: {total_lines_pruned}")
         return
 
     while not board.is_game_over():
@@ -104,8 +105,7 @@ def main():
             logger.info(f"Bot chose {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
 
     log_result(board)
-    logger.info(f"Positions evaluated: {total_positions_evaluated} | Lines pruned: {total_lines_pruned}")
-
+    
 
 
 if __name__ == "__main__":
