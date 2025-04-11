@@ -1,0 +1,36 @@
+.
+├── README.md
+├── Requirements.txt
+├── roadmap.md
+├── src
+│   └── python
+│       ├── __pycache__
+│       │   └── main.cpython-313.pyc
+│       ├── bot_vs_bot_games.pgn
+│       ├── engine
+│       │   ├── __init__.py
+│       │   ├── __pycache__
+│       │   │   ├── __init__.cpython-313.pyc
+│       │   │   ├── evaluation.cpython-313.pyc
+│       │   │   └── search.cpython-313.pyc
+│       │   ├── board.py
+│       │   ├── evaluation
+│       │   │   ├── PSTs.py
+│       │   │   ├── __pycache__
+│       │   │   │   ├── PSTs.cpython-313.pyc
+│       │   │   │   └── evaluation.cpython-313.pyc
+│       │   │   └── evaluation.py
+│       │   ├── move_gen.py
+│       │   └── search.py
+│       ├── main.py
+│       ├── tests
+│       ├── ui
+│       └── utils
+│           ├── __pycache__
+│           │   ├── counters.cpython-313.pyc
+│           │   └── log.cpython-313.pyc
+│           ├── counters.py
+│           └── log.py
+└── tree.txt
+
+12 directories, 22 files

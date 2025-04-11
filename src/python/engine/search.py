@@ -14,6 +14,7 @@ def order_moves(board, quiescence=False):
     all_moves = list(board.legal_moves)
     check_bonus = 100
     # Sort moves by their type
+    checkmates = []
     promotions = []
     captures = []
     checks = []
@@ -22,11 +23,18 @@ def order_moves(board, quiescence=False):
         if move.promotion:
             promotions.append(move)
         elif board.gives_check(move):
-            checks.append(move)
+            board.push(move)
+            if board.is_checkmate():
+                checkmates.append(move)
+            else: checks.append(move)
+            board.pop()
         elif board.is_capture(move):
             captures.append(move)
         else:
             non_captures.append(move)
+        
+    if debug_search and checkmates: 
+        logger.debug(f"Found {len(checkmates)} checkmate move(s): {checkmates}")
 
     if debug_search:
         logger.debug(f"Ordering moves: {len(promotions)} promotions, {len(captures)} captures, {len(checks)} checks, {len(non_captures)} non-captures")
@@ -37,8 +45,8 @@ def order_moves(board, quiescence=False):
     captures.sort(key=lambda x: MVV_LVA(board, x) + add_check_bonus(board,x,check_bonus), reverse=True)
     
     if quiescence:
-        return promotions + captures + checks 
-    return promotions + captures + checks + non_captures
+        return checkmates + promotions + captures + checks 
+    return checkmates + promotions + captures + checks + non_captures
 
         
 def is_quiet(board):
@@ -120,9 +128,9 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     
     ordered_moves = order_moves(board)
     max_eval = -float('inf')
-
     local_positions_evaluated = 0
     local_lines_pruned = 0
+
     for move in ordered_moves:
         local_positions_evaluated += 1
         board.push(move)

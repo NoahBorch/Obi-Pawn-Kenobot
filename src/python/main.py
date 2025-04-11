@@ -215,7 +215,7 @@ def main():
     if args.load_from_pgn:
         logger.playing("Loading game from PGN:")
         PGN = args.load_from_pgn
-        board = chess.pgn.read_game(open(PGN))
+        board = chess.pgn.read_game(PGN)
     elif args.load_from_FEN:
         logger.playing("Loading game from FEN:")
         FEN = args.load_from_FEN

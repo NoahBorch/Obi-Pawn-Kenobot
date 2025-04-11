@@ -4,13 +4,13 @@ import logging
 # Custom level: Between DEBUG (10) and INFO (20)
 PLAYING_VERBOSE_LEVEL = 25
 logging.addLevelName(PLAYING_VERBOSE_LEVEL, "PLAYING")
-debug_config = {
-    "evaluation": False,
-    "search": False,
-    "counters": False,
-    "logging": False,
-    "main": False,
-}
+# debug_config = {
+#     "evaluation": False,
+#     "search": False,
+#     "counters": False,
+#     "logging": False,
+#     "main": False,
+# }
 
 
 def playing(self, message, *args, **kwargs):

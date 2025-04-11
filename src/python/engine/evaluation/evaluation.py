@@ -5,6 +5,7 @@ from utils.log import logger, debug_config
 from engine.evaluation.PSTs import get_piece_square_tables_by_phase, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
 
 
+
 debug_evaluation = debug_config["evaluation"]
 last_logged_phase = PHASE_OPENING
 
@@ -133,17 +134,26 @@ def endgame_incentives(board):
     return bonus 
 
 
-
-
 def evaluate_position(board):
     """
     Evaluate the position of the board for the given color.
     :param board: The chess board, currently uses the python chess board object
     :return: A score representing the evaluation of the position.
     """
+    global debug_evaluation
     turn = board.turn
+    if debug_evaluation:
+        logger.debug(f"Evaluating position for {'white' if turn else 'black'}")
+        logger.debug(f"Current board: \n{board}")
+        logger.debug(f"Turn: {turn}")
+        logger.debug(f"Current phase: {last_logged_phase}")
+        if board.is_checkmate():
+            logger.debug("Checkmate detected")
     if board.outcome():
         if board.is_checkmate():
+            if debug_evaluation:
+                from main import print_board_clean
+                logger.debug(f"Checkmate detected for moving player: {turn}, in position: \n{print_board_clean(board)} after player plays {board.san(board.peek())}")
             return 1000000 if turn else -1000000
         else:
             return -1
