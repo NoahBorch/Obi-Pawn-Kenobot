@@ -8,7 +8,7 @@ from engine.search import find_best_move
 from main import set_global_depth
 from ui.terminal_prints import print_board_clean
 from utils.log import logger, configure_logging
-from utils.debug_config import debug_config
+from utils.debug_config import get_debug_config, set_debug_config_for_module
 
 
 
@@ -31,10 +31,12 @@ class TestSearch(unittest.TestCase):
     
     def test_all_EPD_positions(self):
         configure_logging("debug", save_to_file=True, logdir="logs/epd_tests")
+        set_debug_config_for_module("search", True)
+
 
         # Prompt user for depth
         #depth = input("Enter the depth for EPD tests (default is 3): ")
-        depth = "6"
+        depth = "5"
         if not depth.isdigit():
             depth = 3
         else:
@@ -59,7 +61,7 @@ class TestSearch(unittest.TestCase):
                 continue
 
             total += 1
-            if total == 5: return
+          
 
             try:
                 board = chess.Board()

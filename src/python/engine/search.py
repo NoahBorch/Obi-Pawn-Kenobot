@@ -1,15 +1,25 @@
 #search.py
+import time
 import chess
 
 from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus, CHECKMATE_BASE_SCORE
+from ui.terminal_prints import print_board_clean
 from utils.counters import update_total_counters
 from utils.log import logger
 from utils.debug_config import debug_config, get_debug_config
 from utils.config import get_global_depth, set_global_depth
 
-debug_search = get_debug_config("search")
+
 GLOBAL_DEPTH = get_global_depth()
 qDepth = get_global_depth() // 2 + 2
+try:
+    global_depth = get_global_depth()
+except ValueError:
+    logger.error("Global depth not set. Using default value of 3.")
+    global_depth = 3
+
+debug_search = get_debug_config("search")
+debug_move_ordering = get_debug_config("move_ordering")
 
 
 
@@ -42,10 +52,10 @@ def order_moves(board, quiescence=False):
         else:
             non_captures.append(move)
         
-    if debug_search and checkmates: 
+    if debug_move_ordering and checkmates: 
         logger.debug(f"Found {len(checkmates)} checkmate move(s): {checkmates}")
 
-    if debug_search:
+    if debug_move_ordering:
         logger.debug(f"Ordering moves: {len(promotions)} promotions, {len(captures)} captures, {len(checks)} checks, {len(non_captures)} non-captures")
         logger.debug(f"Promotions: {len(promotions)}, Captures: {len(captures)}, Checks: {len(checks)}, Non-captures: {len(non_captures)}")
         logger.debug(f"All captures: {captures}")
@@ -141,19 +151,26 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
         return -1
     
     elif depth == 0:
-        from main import get_global_depth
         return quiescence_search(board, qDepth, alpha, beta)
     
     ordered_moves = order_moves(board)
     max_eval = -float('inf')
     local_positions_evaluated = 0
     local_lines_pruned = 0
+    if debug_search:
+        global_depth = get_global_depth()
+        if depth == global_depth -1 :
+            logger.debug(f"Evaluating position: \n{print_board_clean(board)}")
+            logger.debug(f"Depth: {depth}, Alpha: {alpha}, Beta: {beta}")
+            logger.debug(f"Legal moves: {[board.san(move) for move in ordered_moves]}")
 
     for move in ordered_moves:
         local_positions_evaluated += 1
         board.push(move)
         eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
         board.pop()
+        if debug_search and depth == GLOBAL_DEPTH - 1:
+            logger.debug(f"Evaluated move {board.san(move)} to score {eval}")
         if eval == CHECKMATE_BASE_SCORE:
             update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
             return CHECKMATE_BASE_SCORE + qDepth + depth
@@ -172,6 +189,8 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     return max_eval
 
 def find_best_move(board, depth):
+    global debug_search
+    debug_search = get_debug_config("search")
     if not board.legal_moves:
         logger.info("No legal moves available.")
         return None, 0
@@ -182,8 +201,16 @@ def find_best_move(board, depth):
     beta = float('inf')
     local_positions_evaluated = 0
     local_lines_pruned = 0
-
+    if debug_search:
+        order_moves_time = time.perf_counter()
+        ordered_moves = order_moves(board)
+        order_moves_time = time.perf_counter() - order_moves_time
+        logger.debug(f"Ordered moves in {order_moves_time:.4f} seconds")
+        logger.debug(f"Ordered moves: {[board.san(move) for move in ordered_moves]}")
     for move in order_moves(board):
+        if debug_search:
+            move_search_time = time.perf_counter()
+            logger.debug(f"Evaluating move: {board.san(move)}")
         local_positions_evaluated += 1
         board.push(move)
         if board.is_checkmate():
@@ -191,6 +218,10 @@ def find_best_move(board, depth):
             return move, CHECKMATE_BASE_SCORE + qDepth + GLOBAL_DEPTH
         eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
         board.pop()
+        if debug_search:
+            move_search_time = time.perf_counter() - move_search_time
+            logger.debug(f"Move {board.san(move)} evaluated in {move_search_time:.4f} seconds")
+            logger.debug(f"Evaluated move {board.san(move)} to score {eval}")
 
         if eval > max_eval:
             max_eval = eval

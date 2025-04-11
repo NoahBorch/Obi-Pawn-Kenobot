@@ -3,6 +3,7 @@
 debug_config = {
     "evaluation": False,
     "search": False,
+    "move_ordering" : False,
     "counters": False,
     "logging": False,
     "main": False,
