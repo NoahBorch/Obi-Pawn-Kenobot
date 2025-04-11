@@ -1,7 +1,8 @@
 #counter.py
-from utils.log import logger, debug_config
+from utils.log import logger
+from utils.debug_config import get_debug_config
 
-debug_counter = debug_config["counters"]
+debug_counter = get_debug_config("counters")
 if debug_counter:
     logger.debug("Counter debug mode enabled")
 
@@ -36,8 +37,9 @@ if not debug_counter:
         
 
         if reset_ply:
-            logger.debug(f"Total positions evaluated: {total_positions_evaluated}, Total lines pruned: {total_lines_pruned}")
-            logger.debug(f"Current ply positions evaluated: {curent_ply_positions_evaluated}, Current ply lines pruned: {curent_ply_lines_pruned}")
+            if debug_counter:
+                logger.debug(f"Total positions evaluated: {total_positions_evaluated}, Total lines pruned: {total_lines_pruned}")
+                logger.debug(f"Current ply positions evaluated: {curent_ply_positions_evaluated}, Current ply lines pruned: {curent_ply_lines_pruned}")
             logger.info(f"Positions evaluated to find this move: {curent_ply_positions_evaluated}, Lines pruned: {curent_ply_lines_pruned}")
             curent_ply_positions_evaluated = 0
             curent_ply_lines_pruned = 0
@@ -51,13 +53,15 @@ else:
 
         curent_ply_positions_evaluated += positions_evaluated
         curent_ply_lines_pruned += lines_pruned
-        logger.debug(f"Total positions evaluated: {total_positions_evaluated}, Total lines pruned: {total_lines_pruned}")
-        logger.debug(f"Current ply positions evaluated: {curent_ply_positions_evaluated}, Current ply lines pruned: {curent_ply_lines_pruned}")
+        if debug_counter:
+            logger.debug(f"Total positions evaluated: {total_positions_evaluated}, Total lines pruned: {total_lines_pruned}")
+            logger.debug(f"Current ply positions evaluated: {curent_ply_positions_evaluated}, Current ply lines pruned: {curent_ply_lines_pruned}")
 
         
         if reset_ply:
-            logger.debug(f"Total positions evaluated: {total_positions_evaluated}, Total lines pruned: {total_lines_pruned}")
-            logger.debug(f"Current ply positions evaluated: {curent_ply_positions_evaluated}, Current ply lines pruned: {curent_ply_lines_pruned}")
+            if debug_counter:
+                logger.debug(f"Total positions evaluated: {total_positions_evaluated}, Total lines pruned: {total_lines_pruned}")
+                logger.debug(f"Current ply positions evaluated: {curent_ply_positions_evaluated}, Current ply lines pruned: {curent_ply_lines_pruned}")
             logger.info(f"Positions evaluated to find this move: {curent_ply_positions_evaluated}, Lines pruned: {curent_ply_lines_pruned}")
             curent_ply_positions_evaluated = 0
             curent_ply_lines_pruned = 0

@@ -1,13 +1,16 @@
 #evaluation.py
 
 import chess
-from utils.log import logger, debug_config
+from utils.log import logger
+from utils.debug_config import debug_config
 from engine.evaluation.PSTs import get_piece_square_tables_by_phase, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
+from ui.terminal_prints import print_board_clean
 
 
 
 debug_evaluation = debug_config["evaluation"]
 last_logged_phase = PHASE_OPENING
+CHECKMATE_BASE_SCORE = 1000000
 
 
 
@@ -154,7 +157,7 @@ def evaluate_position(board):
             if debug_evaluation:
                 from main import print_board_clean
                 logger.debug(f"Checkmate detected for moving player: {turn}, in position: \n{print_board_clean(board)} after player plays {board.san(board.peek())}")
-            return 1000000 if turn else -1000000
+            return CHECKMATE_BASE_SCORE if turn else -CHECKMATE_BASE_SCORE
         else:
             return -1
     else:
@@ -173,4 +176,8 @@ def evaluate_position(board):
 
         if debug_evaluation:
             logger.debug(f"Current evaluation score: {current_eval if turn else -current_eval}")
+            logger.debug(f"Material evaluation score: {material_eval_score}")
+            logger.debug(f"Piece square table evaluation score: {PST_eval_score}")
+            logger.debug(f"Endgame evaluation score: {endgame_incentives(board)}")
+            logger.debug(f"Board state: \n{print_board_clean(board)}")
         return current_eval if turn else -current_eval

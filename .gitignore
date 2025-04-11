@@ -61,6 +61,7 @@ coverage.xml
 *.log
 *.db
 *.sqlite3
+logs/
 
 # Jupyter
 .ipynb_checkpoints

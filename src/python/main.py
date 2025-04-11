@@ -5,44 +5,18 @@ import random
 import argparse
 import time
 
-from utils.log import logger, configure_logging, debug_config, log_result
+from utils.debug_config import debug_config
+from utils.log import logger, configure_logging, log_result
+from utils.config import get_global_depth, set_global_depth
+from utils.debug_config import get_debug_config, set_debug_config_for_module
 from utils.counters import get_total_counters, reset_total_counters
 from engine.search import find_best_move
-
-debug_main = debug_config["main"]
-
-depth = 5
-# ANSI escape codes
-RESET = "\033[0m"
-WHITE_PIECE = "\033[97m"  # Bright white
-BLACK_PIECE = "\033[30m"  # Bright black
-LIGHT_SQUARE = "\033[48;5;180m"  # light tan
-DARK_SQUARE = "\033[48;5;94m"    # medium brown
-
-UNICODE_PIECES = {
-    (chess.PAWN, False):   '♙',
-    (chess.KNIGHT, False): '♘',
-    (chess.BISHOP, False): '♗',
-    (chess.ROOK, False):   '♖',
-    (chess.QUEEN, False):  '♕',
-    (chess.KING, False):   '♔',
-    (chess.PAWN, True):    '♟',
-    (chess.KNIGHT, True):  '♞',
-    (chess.BISHOP, True):  '♝',
-    (chess.ROOK, True):    '♜',
-    (chess.QUEEN, True):   '♛',
-    (chess.KING, True):    '♚',
-}
+from ui.terminal_prints import print_board_clean, print_board_colored
 
 
+debug_main = get_debug_config("main")
+depth = get_global_depth()
 
-def set_global_depth(new_depth):
-    global depth
-    depth = new_depth
-
-def get_global_depth():
-    global depth
-    return depth
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Play a game against Obi-Pawn Kenobot")
@@ -150,45 +124,7 @@ def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
     logger.info(f"Game result added to {pgn_filename}.")
     logger.info(f"Time taken: {game.headers['Time']} seconds")
 
-def colored_square(square, piece):
-    is_light = (chess.square_rank(square) + chess.square_file(square)) % 2 == 0
-    bg_color = LIGHT_SQUARE if is_light else DARK_SQUARE
-    if piece:
-        symbol = UNICODE_PIECES[(piece.piece_type, True)]
-        fg_color = WHITE_PIECE if piece.color == chess.WHITE else BLACK_PIECE
-        return f"{bg_color} {fg_color}{symbol} {RESET}"
-    else:
-        return f"{bg_color}   {RESET}"
 
-def print_board_colored(board: chess.Board) -> str:
-    piece_map = board.piece_map()
-    rows = []
-    for rank in range(8, 0, -1):
-        row = f"{rank} "
-        for file in range(8):
-            square = chess.square(file, rank - 1)
-            piece = piece_map.get(square)
-            row += colored_square(square, piece) + " "
-        rows.append(row + RESET)
-    footer = "   " + "   ".join("abcdefgh")
-    return "\n".join(rows) + "\n" + footer
-
-def print_board_clean(board: chess.Board) -> str:
-    piece_map = board.piece_map()
-    rows = []
-    for rank in range(8, 0, -1):
-        row = []
-        for file in range(8):
-            square = chess.square(file, rank - 1)
-            piece = piece_map.get(square)
-            if piece:
-                row.append(UNICODE_PIECES[(piece.piece_type, piece.color)])
-            else:
-                row.append('.')
-        rows.append(f"{rank}{' '.join(row)}")
-    board_str = "\n".join(rows)
-    board_str += "\n a b c d e f g h"
-    return board_str
 
 def main():
     global total_positions_evaluated, total_lines_pruned, depth
@@ -209,6 +145,7 @@ def main():
        
     else:
         depth = int(args.depth)
+    set_global_depth(depth)
 
     start_time = time.perf_counter()
 
@@ -290,10 +227,10 @@ def main():
                     continue
             else:
                 move, eval = find_best_move(board, depth)
-                board.push(move)
-                node = node.add_variation(move)
                 logger.playing(f"Obi-Pawn plays: {move}")
                 logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
+                board.push(move)
+                node = node.add_variation(move)
     
     log_result(board)
 

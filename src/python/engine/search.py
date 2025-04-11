@@ -1,12 +1,15 @@
 #search.py
 import chess
 
-from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus
+from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus, CHECKMATE_BASE_SCORE
 from utils.counters import update_total_counters
-from utils.log import logger, debug_config
+from utils.log import logger
+from utils.debug_config import debug_config, get_debug_config
+from utils.config import get_global_depth, set_global_depth
 
-
-debug_search = debug_config["search"]
+debug_search = get_debug_config("search")
+GLOBAL_DEPTH = get_global_depth()
+qDepth = get_global_depth() // 2 + 2
 
 
 
@@ -20,12 +23,18 @@ def order_moves(board, quiescence=False):
     checks = []
     non_captures = []
     for move in all_moves:
+        # board.push(move)
+        # if board.is_checkmate():
+        #     checkmates.append(move)
+        # board.pop()
         if move.promotion:
             promotions.append(move)
         elif board.gives_check(move):
             board.push(move)
             if board.is_checkmate():
                 checkmates.append(move)
+                board.pop()
+                return checkmates
             else: checks.append(move)
             board.pop()
         elif board.is_capture(move):
@@ -74,6 +83,10 @@ def quiescence_search(board, qDepth, alpha, beta):
     max_eval = evaluate_position(board)
 
     if board.outcome() or qDepth == 0:
+        if max_eval == CHECKMATE_BASE_SCORE:
+            return CHECKMATE_BASE_SCORE + qDepth
+        elif max_eval == -CHECKMATE_BASE_SCORE:
+            return -CHECKMATE_BASE_SCORE - qDepth
         return max_eval
     elif (board.can_claim_threefold_repetition() or board.can_claim_fifty_moves()):
         return -1
@@ -89,6 +102,12 @@ def quiescence_search(board, qDepth, alpha, beta):
         board.push(move)
         eval = -quiescence_search(board, qDepth - 1 , -beta, -alpha)
         board.pop()
+        if eval == CHECKMATE_BASE_SCORE:
+            update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
+            return CHECKMATE_BASE_SCORE + qDepth
+        elif eval == -CHECKMATE_BASE_SCORE:
+            update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
+            return -CHECKMATE_BASE_SCORE - qDepth
 
         if eval > max_eval:
             max_eval = eval
@@ -123,7 +142,6 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
     
     elif depth == 0:
         from main import get_global_depth
-        qDepth = get_global_depth() // 2 + 2
         return quiescence_search(board, qDepth, alpha, beta)
     
     ordered_moves = order_moves(board)
@@ -136,6 +154,12 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf')):
         board.push(move)
         eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
         board.pop()
+        if eval == CHECKMATE_BASE_SCORE:
+            update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
+            return CHECKMATE_BASE_SCORE + qDepth + depth
+        if eval == -CHECKMATE_BASE_SCORE:
+            update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
+            return -CHECKMATE_BASE_SCORE - qDepth - depth
         
         if eval > max_eval:
             max_eval = eval
@@ -162,6 +186,9 @@ def find_best_move(board, depth):
     for move in order_moves(board):
         local_positions_evaluated += 1
         board.push(move)
+        if board.is_checkmate():
+            board.pop()
+            return move, CHECKMATE_BASE_SCORE + qDepth + GLOBAL_DEPTH
         eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
         board.pop()
 

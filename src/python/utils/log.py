@@ -1,4 +1,6 @@
+from datetime import datetime
 import logging
+from pathlib import Path
 
 
 # Custom level: Between DEBUG (10) and INFO (20)
@@ -24,7 +26,7 @@ class PlayingFilter(logging.Filter):
     def filter(self, record):
         return record.levelno == PLAYING_VERBOSE_LEVEL
 
-def configure_logging(level_str: str = "info"):
+def configure_logging(level_str: str = "info", save_to_file: bool = False, logdir: str = "logs"):
     level_str = level_str.lower()
 
     level_map = {
@@ -53,6 +55,19 @@ def configure_logging(level_str: str = "info"):
         playing_handler.addFilter(PlayingFilter())
         logger.addHandler(playing_handler)
 
+        if save_to_file:
+            logs_dir = Path(logdir)
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_path = logs_dir / f"epd_test_{timestamp}.log"
+
+            file_handler = logging.FileHandler(log_path, mode="w")
+            file_formatter = logging.Formatter(
+                '[%(asctime)s] %(levelname)s - %(message)s', '%H:%M:%S'
+            )
+            file_handler.setFormatter(file_formatter)
+            logger.addHandler(file_handler)
+    
 def log_result(board):
     from utils.counters import get_total_counters
     
