@@ -1,3 +1,4 @@
+import json
 import unittest
 import chess
 import time
@@ -30,18 +31,18 @@ class TestSearch(unittest.TestCase):
     
     
     def test_all_EPD_positions(self):
-        configure_logging("debug", save_to_file=True, logdir="logs/epd_tests")
-        set_debug_config_for_module("search", True)
 
-
-        # Prompt user for depth
-        #depth = input("Enter the depth for EPD tests (default is 3): ")
-        depth = "5"
+        # Set depth manually or via prompt
+        depth = "6"
         if not depth.isdigit():
             depth = 3
         else:
             depth = int(depth)
         set_global_depth(depth)
+
+        # Use new logger config that returns the log folder path
+        log_path = configure_logging("debug", save_to_file=True, logdir=f"../../logs/depth{depth}/epd_tests_split")
+        set_debug_config_for_module("search", True)
 
         logger.debug(f"Using depth: {depth}")
         epd_path = Path(__file__).parent / "EPD_tests.txt"
@@ -53,78 +54,101 @@ class TestSearch(unittest.TestCase):
         correct = 0
         failed = 0
         errors = 0
+        results_log = []
+        output_file = log_path / "epd_test_results.json"
         start_time = time.perf_counter()
 
-        for epd_line in epd_positions:
-            epd_line = epd_line.strip()
-            if not epd_line or epd_line.startswith("#"):
-                continue
+        try:
+            for epd_line in epd_positions:
+                epd_line = epd_line.strip()
+                if not epd_line or epd_line.startswith("#"):
+                    continue
 
-            total += 1
-          
+                total += 1
+                
+                try:
+                    board = chess.Board()
+                    operations = board.set_epd(epd_line)
+                    expected_moves = operations.get("bm", [])
+                    if not expected_moves:
+                        logger.warning(f"⚠️ No best move found in: {epd_line}")
+                        continue
+
+                    expected_move = expected_moves[0]
+
+                    logger.debug("=" * 50)
+                    logger.info(f"📌 Position {total}")
+                    logger.info(f"\n{print_board_clean(board)}")
+                    logger.info(f"🔍 Expected move: {board.san(expected_move)}")
+
+                    best_move, eval_score = find_best_move(board, depth=depth)
+
+                    if not board.is_legal(expected_move):
+                        logger.error("🚫 SOMETHING IS WRONG")
+                        logger.error(f"Expected move {board.san(expected_move)} is not legal!")
+                        logger.debug(f"Legal moves: {[board.san(m) for m in board.legal_moves]}")
+                        errors += 1
+                        result_status = "error"
+                        continue
+
+                    try:
+                        move_san = board.san(best_move)
+                    except ValueError:
+                        move_san = f"[INVALID MOVE: {best_move.uci()}]"
+
+                    if best_move == expected_move:
+                        correct += 1
+                        logger.info(f"✅ Chosen move: {move_san} (Eval: {eval_score}) — CORRECT")
+                        result_status = "correct"
+                    else:
+                        failed += 1
+                        logger.warning(f"❌ Chosen move: {move_san} (Eval: {eval_score}) — WRONG")
+                        result_status = "wrong"
+
+                except Exception as e:
+                    logger.error(f"💥 ERROR processing EPD: {epd_line}\n{e}")
+                    errors += 1
+                    best_move = None
+                    expected_move = None
+                    eval_score = None
+                    result_status = "error"
+
+                results_log.append({
+                    "position": epd_line,
+                    "fen": board.fen() if 'board' in locals() else None,
+                    "expected_move": expected_move.uci() if expected_moves else None,
+                    "best_move": best_move.uci() if best_move else None,
+                    "eval": eval_score,
+                    "result": result_status
+                })
+
+        except KeyboardInterrupt:
+            logger.warning("⚠️ KeyboardInterrupt — Exiting early and saving results.")
+
+        finally:
+            duration = round(time.perf_counter() - start_time, 2)
+
+            logger.info("\n" + "=" * 50)
+            logger.info("📊 EPD TEST SUMMARY")
+            logger.info(f"🧩 Total positions: {total}")
+            logger.info(f"✅ Correct: {correct}")
+            logger.info(f"❌ Wrong: {failed}")
+            logger.info(f"💥 Errors: {errors}")
+            logger.info(f"⏱ Duration: {duration} seconds")
+            logger.info("=" * 50 + "\n")
+            logger.info(f"Depth used: {depth}")
 
             try:
-                board = chess.Board()
-                operations = board.set_epd(epd_line)
-                expected_moves = operations.get("bm", [])
-
-                if not expected_moves:
-                    logger.warning(f"⚠️ No best move found in: {epd_line}")
-                    continue
-
-                expected_move = expected_moves[0]  # just use the first one
-
-                logger.debug("=" * 50)
-                logger.debug(f"📌 Position {total}")
-                logger.debug(f"\n{print_board_clean(board)}")
-                logger.debug(f"🔍 Expected move: {board.san(expected_move)}")
-
-                best_move, eval_score = find_best_move(board, depth=depth)
-                #move_san = board.san(best_move)
-
-                if not board.is_legal(expected_move):
-                    logger.error("🚫🚫🚫🚫🚫🚫🚫🚫🚫 SOMETHING IS WRONG 🚫🚫🚫🚫🚫🚫🚫🚫🚫🚫🚫🚫")
-                    logger.error(f"Expected move {board.san(expected_move)} is not legal in this position!")
-                    logger.debug(f"Legal moves were: {[board.san(move) for move in board.legal_moves]}")
-                    logger.debug(f"Best move was: {board.san(best_move)}")
-                    logger.debug(f"Expected move was: {board.san(expected_move)}")
-                    logger.debug(f"EPD line was: {epd_line}")
-                    logger.debug(f"FEN was: {board.fen()}")
-                elif best_move.uci() not in [move.uci() for move in board.legal_moves]:
-                    logger.error(f"🚫 ILLEGAL move from engine: {best_move.san()} is not legal in this position!")
-                    logger.debug(f"Legal moves were: {[move.san() for move in board.legal_moves]}")
-                    errors += 1
-                    continue
-
-                try:
-                    move_san = board.san(best_move)
-                except ValueError:
-                    move_san = f"[INVALID MOVE: {best_move.uci()}]"
-
-                if best_move == expected_move:
-                    correct += 1
-                    logger.debug(f"✅ Chosen move: {move_san} (Eval: {eval_score}) — CORRECT")
-                else:
-                    failed += 1
-                    logger.warning(f"❌ Chosen move: {move_san} (Eval: {eval_score}) — WRONG")
-
+                with open(output_file, "w") as f:
+                    json.dump(results_log, f, indent=2)
+                logger.info(f"📄 Results saved to {output_file}")
             except Exception as e:
-                errors += 1
-                logger.error(f"💥 ERROR: Could not process EPD: {epd_line}\n{e}")
-
-        # Final summary
-        duration = round(time.perf_counter() - start_time, 2)
-        logger.info("\n" + "=" * 50)
-        logger.info("📊 EPD TEST SUMMARY")
-        logger.info(f"🧩 Total positions: {total}")
-        logger.info(f"✅ Correct: {correct}")
-        logger.info(f"❌ Wrong: {failed}")
-        logger.info(f"💥 Errors: {errors}")
-        logger.info(f"⏱ Duration: {duration} seconds")
-        logger.info("=" * 50 + "\n")
+                logger.error(f"💥 Failed to save results JSON: {e}")
 
 if __name__ == "__main__":  
     suite = unittest.TestSuite()
     suite.addTest(TestSearch("test_all_EPD_positions"))
     runner = unittest.TextTestRunner()
     runner.run(suite)
+
+    #To run: python -m unittest tests.test_search.TestSearch.test_all_EPD_positions
