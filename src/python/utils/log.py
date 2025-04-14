@@ -79,7 +79,7 @@ def configure_logging(level_str: str = "info", save_to_file: bool = False, logdi
             logger.addHandler(summary_file_handler)
 
             logger.debug(f"📄 Logging to: {full_log_path} (full) and {summary_log_path} (summary)")
-    return log_subdir
+            return log_subdir
     
 def log_result(board):
     from utils.counters import get_total_counters

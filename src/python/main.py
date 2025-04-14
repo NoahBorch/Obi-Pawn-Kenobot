@@ -125,7 +125,6 @@ def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
     logger.info(f"Time taken: {game.headers['Time']} seconds")
 
 
-
 def main():
     global total_positions_evaluated, total_lines_pruned, depth
     args, players_color = parse_args()
