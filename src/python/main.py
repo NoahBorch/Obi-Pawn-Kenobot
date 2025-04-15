@@ -5,10 +5,8 @@ import random
 import argparse
 import time
 
-from utils.debug_config import get_debug_config, set_debug_config_for_module, set_no_debug
-set_no_debug()
 
-from utils.debug_config import debug_config
+from utils.debug_config import get_debug_config, set_debug_config_for_module, set_no_debug
 from utils.log import logger, configure_logging, log_result
 from utils.config import get_global_depth, set_global_depth, set_iterative_depth, set_iterative_deepening, get_iterative_deepening, get_iterative_depth
 from utils.counters import get_total_counters, reset_total_counters
@@ -149,7 +147,7 @@ def main():
     global total_positions_evaluated, total_lines_pruned, depth
     args, players_color = parse_args()
     # Configure logging based on user selection
-    configure_logging(get_log_level(args))
+    configure_logging(get_log_level(args), save_to_file=True, logdir="../../logs/games")
 
     if args.depth == "choose_later" or int(args.depth) < 1:
         if args.depth == "choose_later":
@@ -225,8 +223,6 @@ def main():
             node = node.add_variation(move)
 
             if board.is_game_over():
-                log_result(board)
-                add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
                 break
         
     else:

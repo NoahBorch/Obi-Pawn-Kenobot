@@ -2,6 +2,8 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
+from ui.terminal_prints import print_board_clean
+
 
 
 # Custom level: Between DEBUG (10) and INFO (20)
@@ -85,7 +87,7 @@ def log_result(board):
     from utils.counters import get_total_counters
     
     logger.playing(f"Game Over: {board.result()}")
-    logger.playing("Final Position:\n" + str(board))
+    logger.playing("Final Position:\n" + print_board_clean(board))
     if board.result() == "1-0":
         logger.playing("White won!")
     elif board.result() == "0-1":

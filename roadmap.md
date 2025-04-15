@@ -10,7 +10,7 @@
 - [x] Create a function that selects the best move from legal ones based on evaluation
 - [x] Add a CLI interface for human vs bot play (e.g. `input()` for moves)
 - [x] Print move decisions and evaluation scores for debugging
-- [ ] Set up unit tests for evaluation and bot logic
+- [x] Set up unit tests for evaluation and bot logic
 
 ## 🚀 Phase 2: Smarter Engine (Still using `python-chess`)
 **Goal:** Make the bot semi-decent
@@ -22,7 +22,7 @@
     - [x] piece-square tables
     - [ ] king safety
 - [ ] Add clock-based time management (evaluate and move within X milliseconds)
-- [ ] Add support for loading board states from FEN for easier testing
+- [x] Add support for loading board states from FEN for easier testing
 - [x] Add PGN generation to store game history
 
 ## 🌐 Phase 3: Lichess Integration
@@ -44,7 +44,7 @@
 - [ ] Integrate book lookups in early moves
 - [ ] Implement a transposition table (hashing)
 - [x] Add basic move ordering (captures, checks first)
-- [ ] Integrate iterative deepening to manage depth dynamically
+- [x] Integrate iterative deepening to manage depth dynamically
 - [x] Add logging for nodes searched, time taken, evaluation scores
 
 ## ⚙️ Phase 5: Partial Custom Engine

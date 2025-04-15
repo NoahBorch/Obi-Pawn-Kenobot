@@ -5,11 +5,11 @@ import time
 from pathlib import Path
 
 
+from utils.debug_config import get_debug_config, set_debug_config_for_module, set_no_debug
 from engine.search import find_best_move
 from main import set_global_depth
 from ui.terminal_prints import print_board_clean
 from utils.log import logger, configure_logging
-from utils.debug_config import get_debug_config, set_debug_config_for_module
 
 
 
@@ -33,7 +33,7 @@ class TestSearch(unittest.TestCase):
     def test_all_EPD_positions(self):
 
         # Set depth manually or via prompt
-        depth = "6"
+        depth = "3"
         if not depth.isdigit():
             depth = 3
         else:
@@ -41,7 +41,7 @@ class TestSearch(unittest.TestCase):
         set_global_depth(depth)
 
         # Use new logger config that returns the log folder path
-        log_path = configure_logging("debug", save_to_file=True, logdir=f"../../logs/depth{depth}/epd_tests_split")
+        log_path = configure_logging("debug", save_to_file=True, logdir=f"../../logs/search_test/depth{depth}/epd_tests_split")
         set_debug_config_for_module("search", True)
 
         logger.debug(f"Using depth: {depth}")
@@ -56,6 +56,7 @@ class TestSearch(unittest.TestCase):
         errors = 0
         results_log = []
         output_file = log_path / "epd_test_results.json"
+        output_results = log_path / "epd_test_results.log"
         start_time = time.perf_counter()
 
         try:
@@ -144,6 +145,21 @@ class TestSearch(unittest.TestCase):
                 logger.info(f"📄 Results saved to {output_file}")
             except Exception as e:
                 logger.error(f"💥 Failed to save results JSON: {e}")
+            try:
+                with open(output_results, "w") as f:
+                    f.write("\n" + "=" * 50)
+                    f.write(f"📊 EPD TEST SUMMARY")
+                    f.write(f"\n🧩 Total positions: {total}")
+                    f.write(f"\n✅ Correct: {correct}")
+                    f.write(f"\n❌ Wrong: {failed}")
+                    f.write(f"\n💥 Errors: {errors}")
+                    f.write(f"\n⏱ Duration: {duration} seconds")
+                    f.write(f"Depth used: {depth}")
+                    f.write("\n" + "=" * 50 + "\n")
+
+                logger.info(f"📄 Results saved to {output_results}")
+            except Exception as e:
+                logger.error(f"💥 Failed to save results log: {e}")
 
 if __name__ == "__main__":  
     suite = unittest.TestSuite()

@@ -1,13 +1,13 @@
 
 
 debug_config = {
-    "evaluation": True,
+    "evaluation": False,
     "search": True,
     "move_ordering" : False,
     "counters": False,
     "logging": False,
     "main": False,
-    "PST": True,
+    "PST": False,
 }
 
 

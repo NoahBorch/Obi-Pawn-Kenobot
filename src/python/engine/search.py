@@ -216,7 +216,7 @@ def find_best_move(board, depth):
     previous_move_evals = None
     for local_depth in range(1, depth + 1):
         if debug_search:
-            logger.playing(f"========================================= \nIterative deepening at depth {local_depth} \n=========================================")
+            logger.debug(f"========================================= \nIterative deepening at depth {local_depth} \n=========================================")
         set_iterative_depth(local_depth)
         max_eval = -float('inf')
         alpha = -float('inf')
