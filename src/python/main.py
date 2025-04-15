@@ -5,10 +5,12 @@ import random
 import argparse
 import time
 
+from utils.debug_config import get_debug_config, set_debug_config_for_module, set_no_debug
+set_no_debug()
+
 from utils.debug_config import debug_config
 from utils.log import logger, configure_logging, log_result
 from utils.config import get_global_depth, set_global_depth, set_iterative_depth, set_iterative_deepening, get_iterative_deepening, get_iterative_depth
-from utils.debug_config import get_debug_config, set_debug_config_for_module
 from utils.counters import get_total_counters, reset_total_counters
 from engine.search import find_best_move
 from ui.terminal_prints import print_board_clean, print_board_colored

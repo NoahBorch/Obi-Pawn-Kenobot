@@ -2,7 +2,8 @@ depth = 5
 iterative_depth = 5
 iterative_deepening = True
 qDepth = depth // 2 + 2
-qDepth_restricted = True
+qDepth_restricted = False
+qDepth_removed = False
 
 def set_global_depth(new_depth):
     global depth
@@ -30,9 +31,14 @@ def get_iterative_deepening():
 
 def get_qDepth():
     global qDepth
+    if qDepth_removed:
+        return 0
     return qDepth if qDepth_restricted else 100
 
 def set_qDepth_restricted(bool):
     global qDepth_restricted
     qDepth_restricted = bool
 
+def set_qDepth_removed(bool):
+    global qDepth_removed
+    qDepth_removed = bool

@@ -161,12 +161,12 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
     if return_move_evals:
         move_evals = {}
 
-    if debug_search:
-        global_depth = get_global_depth()
-        if depth == global_depth -1 :
-            logger.debug(f"Evaluating position: \n{print_board_clean(board)}")
-            logger.debug(f"Depth: {depth}, Alpha: {alpha}, Beta: {beta}")
-            logger.debug(f"Legal moves: {[board.san(move) for move in ordered_moves]}")
+    # if debug_search:
+    #     global_depth = get_global_depth()
+    #     if depth == global_depth -1 :
+    #         logger.debug(f"Evaluating position: \n{print_board_clean(board)}")
+    #         logger.debug(f"Depth: {depth}, Alpha: {alpha}, Beta: {beta}")
+    #         logger.debug(f"Legal moves: {[board.san(move) for move in ordered_moves]}")
 
     for move in ordered_moves:
         local_positions_evaluated += 1
@@ -214,7 +214,9 @@ def find_best_move(board, depth):
     local_lines_pruned = 0
     ordered_moves = order_moves(board)
     previous_move_evals = None
-    for local_depth in range(2, depth + 1):
+    for local_depth in range(1, depth + 1):
+        if debug_search:
+            logger.playing(f"========================================= \nIterative deepening at depth {local_depth} \n=========================================")
         set_iterative_depth(local_depth)
         max_eval = -float('inf')
         alpha = -float('inf')
@@ -238,7 +240,7 @@ def find_best_move(board, depth):
             if board.is_checkmate():
                 board.pop()
                 return move, CHECKMATE_BASE_SCORE + qDepth + GLOBAL_DEPTH
-            eval = negamax_alpha_beta(board, local_depth - 1, -beta, -alpha, return_move_evals=False)
+            eval = -negamax_alpha_beta(board, local_depth - 1, -beta, -alpha)
             board.pop()
             current_move_evals[move] = eval
             if debug_search:

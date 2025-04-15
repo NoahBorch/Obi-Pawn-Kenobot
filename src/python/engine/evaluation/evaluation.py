@@ -9,6 +9,7 @@ from ui.terminal_prints import print_board_clean
 
 
 debug_evaluation = get_debug_config("evaluation")
+debug_PST = get_debug_config("PST")
 last_logged_phase = PHASE_OPENING
 CHECKMATE_BASE_SCORE = 1000000
 
@@ -24,6 +25,14 @@ piece_value = {
 }
 # Define all correctly-oriented PSTs as Python lists from rank 1 to rank 8
 
+piece_type_names = {
+    chess.PAWN: "Pawn",
+    chess.KNIGHT: "Knight",
+    chess.BISHOP: "Bishop",
+    chess.ROOK: "Rook",
+    chess.QUEEN: "Queen",
+    chess.KING: "King"
+}
 
 
 def MVV_LVA(board, move):
@@ -87,8 +96,8 @@ def count_material(board):
                 black_pawn_material_score += 100
     if debug_evaluation:
         logger.debug(f"material count score: {white_material_score - black_material_score}")
-        logger.debug(f"white material no pawns score: {white_material_score-black_material_score-white_pawn_material_score+black_pawn_material_score}")
-        logger.debug(f"black material no pawns score: {black_material_score-white_material_score+white_pawn_material_score-black_pawn_material_score}")
+        logger.debug(f"white material no pawns score: {white_material_score-white_pawn_material_score}")
+        logger.debug(f"black material no pawns score: {black_material_score-black_pawn_material_score}")
   
     return (white_material_score - black_material_score), (white_material_score-white_pawn_material_score), (black_material_score-black_pawn_material_score)
 
@@ -120,13 +129,37 @@ def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns)
     
     PIECE_SQUARE_TABLES = get_piece_square_tables_by_phase(phase)
 
+    if debug_PST:
+        white_piece_scores = {}
+        black_piece_scores = {}
+        piece_scores_by_square = [0]*64
+       
+
+
     for square, piece in all_pieces:
         if piece.color:
             current_eval += PIECE_SQUARE_TABLES[piece.piece_type][square]
+            if debug_PST:
+                score = PIECE_SQUARE_TABLES[piece.piece_type][square]
+                white_piece_scores[piece_type_names[piece.piece_type]] = white_piece_scores.get(piece_type_names[piece.piece_type], 0) + score
+                piece_scores_by_square[square] += score
+
         else:
-            current_eval -= PIECE_SQUARE_TABLES[piece.piece_type][square]
-    if debug_evaluation:
+            if debug_PST:
+                score = PIECE_SQUARE_TABLES[piece.piece_type][chess.square_mirror(square)]
+                black_piece_scores[piece_type_names[piece.piece_type]] = black_piece_scores.get(piece_type_names[piece.piece_type], 0) + score
+                piece_scores_by_square[square] -= score
+            current_eval -= PIECE_SQUARE_TABLES[piece.piece_type][chess.square_mirror(square)]
+                
+    if debug_PST:
         logger.debug(f"Current PST score: {current_eval}")
+        logger.debug(f"White piece scores: {white_piece_scores}")
+        logger.debug(f"Black piece scores: {black_piece_scores}")
+        for i in range(8, 0, -1):
+            row = " ".join(f"{piece_scores_by_square[j + (i - 1) * 8]:>4}" for j in range(8))
+            logger.debug(f"row {i}: {row}")
+            
+
     return current_eval
 
 def endgame_incentives(board):
@@ -146,16 +179,14 @@ def evaluate_position(board):
     global debug_evaluation
     turn = board.turn
     if debug_evaluation:
-        logger.debug(f"Evaluating position for {'white' if turn else 'black'}")
-        logger.debug(f"Current board: \n{board}")
-        logger.debug(f"Turn: {turn}")
+        logger.debug(f"Evaluating position for {'white' if not turn else 'black'}")
+        logger.debug(f"Current board: \n{print_board_clean(board)}")
         logger.debug(f"Current phase: {last_logged_phase}")
         if board.is_checkmate():
             logger.debug("Checkmate detected")
     if board.outcome():
         if board.is_checkmate():
             if debug_evaluation:
-                from main import print_board_clean
                 logger.debug(f"Checkmate detected for moving player: {turn}, in position: \n{print_board_clean(board)} after player plays {board.san(board.peek())}")
             return CHECKMATE_BASE_SCORE if turn else -CHECKMATE_BASE_SCORE
         else:
@@ -178,6 +209,7 @@ def evaluate_position(board):
             logger.debug(f"Current evaluation score: {current_eval if turn else -current_eval}")
             logger.debug(f"Material evaluation score: {material_eval_score}")
             logger.debug(f"Piece square table evaluation score: {PST_eval_score}")
-            logger.debug(f"Endgame evaluation score: {endgame_incentives(board)}")
+            if last_logged_phase == PHASE_ENDGAME:
+                logger.debug(f"Endgame evaluation score: {endgame_incentives(board)}")
             logger.debug(f"Board state: \n{print_board_clean(board)}")
         return current_eval if turn else -current_eval

@@ -1,13 +1,28 @@
 
 
 debug_config = {
-    "evaluation": False,
+    "evaluation": True,
     "search": True,
     "move_ordering" : False,
     "counters": False,
     "logging": False,
     "main": False,
+    "PST": True,
 }
+
+
+
+
+
+def set_no_debug():
+    """
+    Disable all debug configurations.
+    """
+    global debug_config
+    for key in debug_config.keys():
+        debug_config[key] = False
+
+
 
 def set_debug_config_for_module(module, enabled = True):
     """
