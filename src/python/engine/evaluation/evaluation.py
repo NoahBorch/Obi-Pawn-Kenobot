@@ -2,13 +2,13 @@
 
 import chess
 from utils.log import logger
-from utils.debug_config import debug_config
+from utils.debug_config import get_debug_config
 from engine.evaluation.PSTs import get_piece_square_tables_by_phase, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
 from ui.terminal_prints import print_board_clean
 
 
 
-debug_evaluation = debug_config["evaluation"]
+debug_evaluation = get_debug_config("evaluation")
 last_logged_phase = PHASE_OPENING
 CHECKMATE_BASE_SCORE = 1000000
 

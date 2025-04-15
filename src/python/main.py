@@ -7,7 +7,7 @@ import time
 
 from utils.debug_config import debug_config
 from utils.log import logger, configure_logging, log_result
-from utils.config import get_global_depth, set_global_depth
+from utils.config import get_global_depth, set_global_depth, set_iterative_depth, set_iterative_deepening, get_iterative_deepening, get_iterative_depth
 from utils.debug_config import get_debug_config, set_debug_config_for_module
 from utils.counters import get_total_counters, reset_total_counters
 from engine.search import find_best_move
@@ -16,6 +16,7 @@ from ui.terminal_prints import print_board_clean, print_board_colored
 
 debug_main = get_debug_config("main")
 depth = get_global_depth()
+
 
 
 def parse_args():
@@ -124,6 +125,23 @@ def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
     logger.info(f"Game result added to {pgn_filename}.")
     logger.info(f"Time taken: {game.headers['Time']} seconds")
 
+def parse_move(board, move_input):
+    try:
+        # Check UCI format
+        uci_move = chess.Move.from_uci(move_input)
+        if uci_move in board.legal_moves:
+            return uci_move
+    except ValueError:
+        pass
+
+    try:
+        # Check SAN format
+        return board.parse_san(move_input)
+     
+    except ValueError:
+        raise ValueError("Invalid move format")
+
+    return "Invalid move"
 
 def main():
     global total_positions_evaluated, total_lines_pruned, depth
@@ -216,11 +234,10 @@ def main():
             if board.turn == players_color:
                 move_input = input("Your move: ")
                 try:
-                    uci_move = chess.Move.from_uci(move_input)
-                    if uci_move not in board.legal_moves: 
-                        raise ValueError
-                    board.push(uci_move)
-                    node = node.add_variation(uci_move)
+                    move_input = parse_move(board, move_input)
+                    
+                    board.push(move_input)
+                    node = node.add_variation(move_input)
                 except ValueError:
                     logger.warning("Invalid move format or illegal move. Try again.")
                     continue
