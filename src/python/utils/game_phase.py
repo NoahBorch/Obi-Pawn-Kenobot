@@ -15,22 +15,19 @@ piece_value = PIECE_VALUES
 # The last logged phase of the game.
 last_logged_phase = PHASE_OPENING
 
-def count_material_no_pawns(board):
+def count_opponents_material_no_pawns(board):
     """
-    Count the material on the board excluding pawns.
+    Count the opponent's material on the board excluding pawns.
     :param board: The chess board, currently uses the python chess board object
-    :return: A tuple containing the material count for white and black without pawns.
+    :return: A tuple containing the material count for the opponent without pawns.
     """
-    white_material_score = 0
-    black_material_score = 0
+    opponents_material_score = 0
     for square, piece in board.piece_map().items():
         if piece.piece_type == chess.PAWN:
             continue
-        elif piece.color:
-            white_material_score += piece_value[piece.piece_type]
-        else:
-            black_material_score += piece_value[piece.piece_type]
-    return (white_material_score - black_material_score), (white_material_score), (black_material_score)
+        elif piece.color != board.turn:
+            opponents_material_score += piece_value[piece.piece_type]
+    return opponents_material_score
 
 
 def set_last_logged_phase(phase: str) -> None:
