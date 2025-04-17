@@ -3,12 +3,13 @@
 import time
 import chess
 
-from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus, CHECKMATE_BASE_SCORE
+from engine.evaluation.evaluation import evaluate_position, MVV_LVA, add_check_bonus, CHECKMATE_BASE_SCORE, set_last_logged_phase
 from ui.terminal_prints import print_board_clean
 from utils.counters import update_total_counters
 from utils.log import logger
 from utils.debug_config import debug_config, get_debug_config
 from utils.config import get_global_depth, set_global_depth, get_iterative_deepening, get_iterative_depth, set_iterative_depth, get_qDepth
+from utils.game_phase import calculate_game_phase, get_last_logged_phase
 
 
 GLOBAL_DEPTH = get_global_depth()
@@ -202,7 +203,7 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
     return max_eval
   
 
-def find_best_move(board, depth):
+def find_best_move(board, depth, time_budget=None):
     global debug_search
     debug_search = get_debug_config("search")
     if not board.legal_moves:
@@ -214,10 +215,23 @@ def find_best_move(board, depth):
     local_lines_pruned = 0
     ordered_moves = order_moves(board)
     previous_move_evals = None
+    calculate_game_phase(board)
+
+    start_time = time.perf_counter()
+
     for local_depth in range(1, depth + 1):
+        elapsed_time = time.perf_counter() - start_time
+        if time_budget and elapsed_time  >= time_budget:
+            if debug_search:
+                logger.debug(f"Stopped search after completing depth {local_depth - 1} due to time limit ({elapsed_time:.4f}s ≥ {time_budget:.4f}s)")
+            break
+
         if debug_search:
             logger.debug(f"========================================= \nIterative deepening at depth {local_depth} \n=========================================")
+        
         set_iterative_depth(local_depth)
+        
+
         max_eval = -float('inf')
         alpha = -float('inf')
         beta = float('inf')
@@ -231,10 +245,24 @@ def find_best_move(board, depth):
             logger.debug(f"Alpha: {alpha}, Beta: {beta}")
             logger.debug(f" searching moves in order {[board.san(move) for move in ordered_moves]}")      
         
+        total_moves = len(ordered_moves)
+        moves_searched = 0
         for move in ordered_moves:
+            move_search_time = time.perf_counter()
+            elapsed_time = move_search_time - start_time
+            moves_searched += 1
+
+            # Predict if continuing this depth will exceed budget by projecting current time usage
+            if time_budget and elapsed_time * 1.3 >= time_budget:
+                # Only bail early if we're bailing before ~70% of moves have been searched
+                if moves_searched / total_moves < 0.7: 
+                    if debug_search:
+                        logger.debug(f"Stopping search during depth {local_depth} due to time limit ({elapsed_time:.4f}s ≥ {time_budget:.4f}s)")
+                    break
+
             if debug_search:
-                move_search_time = time.perf_counter()
                 logger.debug(f"Evaluating move: {board.san(move)}")
+
             local_positions_evaluated += 1
             board.push(move)
             if board.is_checkmate():
@@ -259,6 +287,10 @@ def find_best_move(board, depth):
             
     logger.info(f"Best move: {best_move}, Evaluation: {max_eval}")
     update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=True)
+
+    if debug_search:
+        logger.debug(f"Search ended at depth {local_depth - 1 if elapsed_time >= time_budget else local_depth}")
+
     
     return best_move, max_eval
 

@@ -8,6 +8,7 @@ debug_config = {
     "logging": False,
     "main": False,
     "PST": False,
+    "game_phase": False,
 }
 
 

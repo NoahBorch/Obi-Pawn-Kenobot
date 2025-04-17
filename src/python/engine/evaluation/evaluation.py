@@ -3,27 +3,23 @@
 import chess
 from utils.log import logger
 from utils.debug_config import get_debug_config
-from engine.evaluation.PSTs import get_piece_square_tables_by_phase, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
+from utils.constants import CHECKMATE_BASE_SCORE, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME, PIECE_VALUES, PIECE_TYPE_NAMES
+from utils.game_phase import get_last_logged_phase
+from engine.evaluation.PSTs import get_piece_square_tables_by_phase
 from ui.terminal_prints import print_board_clean
 
 
 
 debug_evaluation = get_debug_config("evaluation")
+debug_game_phase = get_debug_config("game_phase")
 debug_PST = get_debug_config("PST")
-last_logged_phase = PHASE_OPENING
-CHECKMATE_BASE_SCORE = 1000000
+last_logged_phase =  PHASE_OPENING
 
 
 
-piece_value = {
-    chess.PAWN: 100,
-    chess.KNIGHT: 300,
-    chess.BISHOP: 320,
-    chess.ROOK: 500,
-    chess.QUEEN: 900,
-    chess.KING: 0,
-}
-# Define all correctly-oriented PSTs as Python lists from rank 1 to rank 8
+piece_value = PIECE_VALUES
+piece_type_names = PIECE_TYPE_NAMES
+
 
 piece_type_names = {
     chess.PAWN: "Pawn",
@@ -33,6 +29,16 @@ piece_type_names = {
     chess.QUEEN: "Queen",
     chess.KING: "King"
 }
+
+def set_last_logged_phase(phase):
+    """
+    Set the last logged phase of the game.
+    :param phase: The phase to set.
+    """
+    global last_logged_phase
+    last_logged_phase = phase
+    if debug_evaluation or debug_game_phase:
+        logger.debug(f"Game phase set to: {phase}")
 
 
 def MVV_LVA(board, move):
@@ -101,31 +107,52 @@ def count_material(board):
   
     return (white_material_score - black_material_score), (white_material_score-white_pawn_material_score), (black_material_score-black_pawn_material_score)
 
+def count_material_no_pawns(board):
+    """
+    Count the material on the board excluding pawns.
+    :param board: The chess board, currently uses the python chess board object
+    :return: A tuple containing the material count for white and black without pawns.
+    """
+    white_material_score = 0
+    black_material_score = 0
+    for square, piece in board.piece_map().items():
+        if piece.piece_type == chess.PAWN:
+            continue
+        elif piece.color:
+            white_material_score += piece_value[piece.piece_type]
+        else:
+            black_material_score += piece_value[piece.piece_type]
+    return (white_material_score - black_material_score), (white_material_score), (black_material_score)
 
-def add_piece_square_table_bonuses(board, opponent_material_count_without_pawns):
+def count_opponents_material_no_pawns(board):
+    """
+    Count the opponent's material on the board excluding pawns.
+    :param board: The chess board, currently uses the python chess board object
+    :return: A tuple containing the material count for the opponent without pawns.
+    """
+    opponents_material_score = 0
+    for square, piece in board.piece_map().items():
+        if piece.piece_type == chess.PAWN:
+            continue
+        elif piece.color != board.turn:
+            opponents_material_score += piece_value[piece.piece_type]
+    return opponents_material_score
+        
+
+
+
+def add_piece_square_table_bonuses(board):
     """
     Add bonuses for piece-square tables.
     :param board: The chess board, currently uses the python chess board object
     :param opponent_material_count_without_pawns: The material count of the opponent without pawns
     :return: A score representing the evaluation of the position.
     """
-    global last_logged_phase
+   
     all_pieces = board.piece_map().items()
     current_eval = 0
 
-    if last_logged_phase != PHASE_ENDGAME:
-        if opponent_material_count_without_pawns <= 1300:
-            phase = PHASE_ENDGAME
-        elif board.fullmove_number <= 10:
-            phase = PHASE_OPENING
-        else:
-            phase = PHASE_MIDGAME
-        if phase != last_logged_phase:
-            if debug_evaluation:
-                logger.debug(f"Phase changed from {last_logged_phase} to {phase}")
-            last_logged_phase = phase
-    else:   
-        phase = PHASE_ENDGAME
+    phase = get_last_logged_phase()
     
     PIECE_SQUARE_TABLES = get_piece_square_tables_by_phase(phase)
 
@@ -177,6 +204,7 @@ def evaluate_position(board):
     :return: A score representing the evaluation of the position.
     """
     global debug_evaluation
+    global last_logged_phase
     turn = board.turn
     if debug_evaluation:
         logger.debug(f"Evaluating position for {'white' if not turn else 'black'}")

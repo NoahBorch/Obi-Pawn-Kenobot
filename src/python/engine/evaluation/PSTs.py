@@ -1,8 +1,8 @@
 import chess
 
-PHASE_OPENING = "opening"
-PHASE_MIDGAME = "midgame"
-PHASE_ENDGAME = "endgame"
+from utils.game_phase import PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
+
+
 
 #Top row = rank 8 / row 1
 
