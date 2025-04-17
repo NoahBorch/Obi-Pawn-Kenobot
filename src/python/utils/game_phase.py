@@ -4,10 +4,11 @@ import chess
 from utils.log import logger
 from utils.debug_config import get_debug_config
 #from engine.evaluation.evaluation import count_opponents_material_no_pawns this would be a circular import so I define it here instead
-from utils.constants import PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME
+from utils.constants import PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME, PIECE_VALUES 
 
 
 debug_game_phase = get_debug_config("game_phase")
+piece_value = PIECE_VALUES
 
 
 
