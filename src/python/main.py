@@ -4,6 +4,7 @@ import chess.pgn
 import random
 import argparse
 import time
+from pathlib import Path
 
 
 from utils.debug_config import get_debug_config, set_debug_config_for_module, set_no_debug
@@ -114,13 +115,18 @@ def add_game_result_to_pgn_and_write_pgn(game, board, players_color, start_time)
     game.headers["Result"] = board.result()
     game.headers["Time"] = str(time.perf_counter() - start_time)
 
+    file_path = "../../.logs/games"
+    file_path = Path(file_path)
     if players_color == "only_bot":
+        file_path = file_path / "bot_vs_bot_games"
         pgn_filename = "bot_vs_bot_games.pgn"
     else:
+        file_path = file_path / "bot_vs_human_games"
         pgn_filename = "bot_vs_human_games.pgn"
 
-    with open(pgn_filename, "a") as pgn_file:
-        print(game, file=pgn_file, end="\n\n")
+    with open(file_path / pgn_filename, "a") as f:
+        f.write(str(game))
+        f.write("\n\n")
 
     logger.info(f"Game result added to {pgn_filename}.")
     logger.info(f"Time taken: {game.headers['Time']} seconds")
@@ -141,13 +147,13 @@ def parse_move(board, move_input):
     except ValueError:
         raise ValueError("Invalid move format")
 
-    return "Invalid move"
+
 
 def main():
     global total_positions_evaluated, total_lines_pruned, depth
     args, players_color = parse_args()
     # Configure logging based on user selection
-    configure_logging(get_log_level(args), save_to_file=True, logdir="../../logs/games")
+    configure_logging(get_log_level(args), save_to_file=True, logdir="../../.logs/games")
 
     if args.depth == "choose_later" or int(args.depth) < 1:
         if args.depth == "choose_later":

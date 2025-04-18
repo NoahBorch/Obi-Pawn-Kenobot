@@ -41,7 +41,7 @@ class TestSearch(unittest.TestCase):
         set_global_depth(depth)
 
         # Use new logger config that returns the log folder path
-        log_path = configure_logging("debug", save_to_file=True, logdir=f"../../logs/search_test/depth{depth}/epd_tests_split")
+        log_path = configure_logging("debug", save_to_file=True, logdir=f"../../.logs/search_test/depth{depth}/epd_tests_split")
         set_debug_config_for_module("search", True)
 
         logger.debug(f"Using depth: {depth}")

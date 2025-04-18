@@ -2,13 +2,14 @@
 
 debug_config = {
     "evaluation": False,
-    "search": True,
+    "search": False,
     "move_ordering" : False,
     "counters": False,
     "logging": False,
     "main": False,
     "PST": False,
     "game_phase": False,
+    "play": True,
 }
 
 

@@ -8,7 +8,7 @@ from ui.terminal_prints import print_board_clean
 from utils.counters import update_total_counters
 from utils.log import logger
 from utils.debug_config import debug_config, get_debug_config
-from utils.config import get_global_depth, set_global_depth, get_iterative_deepening, get_iterative_depth, set_iterative_depth, get_qDepth
+from utils.config import get_global_depth, set_global_depth, get_iterative_deepening, get_iterative_depth, set_iterative_depth, get_qDepth, set_qDepth_restricted, set_qDepth_removed
 from utils.game_phase import calculate_game_phase, get_last_logged_phase
 
 
@@ -22,6 +22,7 @@ except ValueError:
 
 debug_search = get_debug_config("search")
 debug_move_ordering = get_debug_config("move_ordering")
+debug_play = get_debug_config("play")
 
 
 
@@ -135,7 +136,7 @@ def quiescence_search(board, qDepth, alpha, beta):
 
 
 
-def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), return_move_evals=False):
+def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), remaining_time = None, return_move_evals=False):
     """
     New Negamax alpha beta search function, using the python chess board object. This function is the old negamax function, 
     but changed to work with my new chess bot. It uses the python chess board object and the evaluate_position function.
@@ -148,7 +149,13 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
 
     
     if board.outcome():
-        return evaluate_position(board)
+        eval = evaluate_position(board) 
+        if eval == CHECKMATE_BASE_SCORE:
+            return CHECKMATE_BASE_SCORE + qDepth + depth
+        elif eval == -CHECKMATE_BASE_SCORE:
+            return -CHECKMATE_BASE_SCORE - qDepth - depth
+        return -1
+    
     elif (board.can_claim_threefold_repetition() or board.can_claim_fifty_moves()):
         return -1
     
@@ -168,8 +175,23 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
     #         logger.debug(f"Evaluating position: \n{print_board_clean(board)}")
     #         logger.debug(f"Depth: {depth}, Alpha: {alpha}, Beta: {beta}")
     #         logger.debug(f"Legal moves: {[board.san(move) for move in ordered_moves]}")
-
+    
+    
+    start_time = time.perf_counter()
+            
     for move in ordered_moves:
+        if remaining_time:
+            elapsed_time = time.perf_counter() - start_time
+            if elapsed_time >= remaining_time:
+                if max_eval == -float('inf'):
+                    board.push(move)
+                    eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
+                    board.pop()
+                    max_eval = eval
+                    alpha = max(alpha, eval)
+                elif debug_search or debug_play:
+                    logger.debug(f"Stopping search inside negamax at depth {depth} due to time limit ({elapsed_time:.4f}s ≥ {remaining_time:.4f}s)")
+                break
         local_positions_evaluated += 1
         board.push(move)
         eval = -negamax_alpha_beta(board, depth - 1, -beta, -alpha)
@@ -205,7 +227,7 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
 
 def find_best_move(board, depth, time_budget=None):
     global debug_search
-    debug_search = get_debug_config("search")
+    global debug_play 
     if not board.legal_moves:
         logger.info("No legal moves available.")
         return None, 0
@@ -217,12 +239,28 @@ def find_best_move(board, depth, time_budget=None):
     previous_move_evals = None
     calculate_game_phase(board)
 
+    if time_budget <= 9:
+        depth = 3
+        set_qDepth_restricted(False)
+        if debug_search or debug_play:
+            logger.debug(f"Time budget is {time_budget:.4f}s, setting depth to 3 and full quiescence search")
+    elif time_budget <= 4:
+        set_qDepth_restricted(True)
+        depth = 2
+        if debug_search or debug_play:
+            logger.debug(f"Time budget is {time_budget:.4f}s, setting depth to 2 and restricting quiescence search")
+    else:
+        set_qDepth_restricted(False)
+        if debug_search or debug_play:
+            logger.debug(f"Time budget is {time_budget:.4f}s, using full depth and full quiescence search")
+        
+
     start_time = time.perf_counter()
 
     for local_depth in range(1, depth + 1):
         elapsed_time = time.perf_counter() - start_time
         if time_budget and elapsed_time  >= time_budget:
-            if debug_search:
+            if debug_search or debug_play:
                 logger.debug(f"Stopped search after completing depth {local_depth - 1} due to time limit ({elapsed_time:.4f}s ≥ {time_budget:.4f}s)")
             break
 
@@ -250,13 +288,14 @@ def find_best_move(board, depth, time_budget=None):
         for move in ordered_moves:
             move_search_time = time.perf_counter()
             elapsed_time = move_search_time - start_time
+            remaining_time = time_budget - elapsed_time if time_budget else None
             moves_searched += 1
 
             # Predict if continuing this depth will exceed budget by projecting current time usage
             if time_budget and elapsed_time * 1.3 >= time_budget:
                 # Only bail early if we're bailing before ~70% of moves have been searched
                 if moves_searched / total_moves < 0.7: 
-                    if debug_search:
+                    if debug_search or debug_play:
                         logger.debug(f"Stopping search during depth {local_depth} due to time limit ({elapsed_time:.4f}s ≥ {time_budget:.4f}s)")
                     break
 
@@ -268,7 +307,7 @@ def find_best_move(board, depth, time_budget=None):
             if board.is_checkmate():
                 board.pop()
                 return move, CHECKMATE_BASE_SCORE + qDepth + GLOBAL_DEPTH
-            eval = -negamax_alpha_beta(board, local_depth - 1, -beta, -alpha)
+            eval = -negamax_alpha_beta(board, local_depth - 1, -beta, -alpha, remaining_time = remaining_time)
             board.pop()
             current_move_evals[move] = eval
             if debug_search:
@@ -288,7 +327,7 @@ def find_best_move(board, depth, time_budget=None):
     logger.info(f"Best move: {best_move}, Evaluation: {max_eval}")
     update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=True)
 
-    if debug_search:
+    if debug_search or debug_play:
         logger.debug(f"Search ended at depth {local_depth - 1 if elapsed_time >= time_budget else local_depth}")
 
     

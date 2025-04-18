@@ -223,10 +223,7 @@ def evaluate_position(board):
         current_eval = 0
         material_eval_score, white_material_count_no_pawns, black_material_count_no_pawns = count_material(board)
         current_eval += material_eval_score
-        if turn:
-            PST_eval_score = add_piece_square_table_bonuses(board, black_material_count_no_pawns)
-        else:
-            PST_eval_score = add_piece_square_table_bonuses(board, white_material_count_no_pawns)
+        PST_eval_score = add_piece_square_table_bonuses(board)
 
         current_eval += PST_eval_score
 

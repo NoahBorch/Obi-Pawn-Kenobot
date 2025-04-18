@@ -29,7 +29,7 @@ class PlayingFilter(logging.Filter):
     def filter(self, record):
         return record.levelno == PLAYING_VERBOSE_LEVEL
 
-def configure_logging(level_str: str = "info", save_to_file: bool = False, logdir: str = "logs"):
+def configure_logging(level_str: str = "info", save_to_file: bool = False, logdir: str = "logs", category: str = None) -> Path:
 
 
     level_str = level_str.lower()
@@ -63,7 +63,8 @@ def configure_logging(level_str: str = "info", save_to_file: bool = False, logdi
         if save_to_file:
             logs_dir = Path(logdir)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_subdir = logs_dir / f"epd_test_{timestamp}"
+            if category:
+                log_subdir = logs_dir / f"{category}/{timestamp}"
             log_subdir.mkdir(parents=True, exist_ok=True)
 
             # Full debug log file
