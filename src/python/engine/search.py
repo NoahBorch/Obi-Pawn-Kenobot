@@ -238,21 +238,21 @@ def find_best_move(board, depth, time_budget=None):
     ordered_moves = order_moves(board)
     previous_move_evals = None
     calculate_game_phase(board)
-
-    if time_budget <= 9:
-        depth = 3
-        set_qDepth_restricted(False)
-        if debug_search or debug_play:
-            logger.debug(f"Time budget is {time_budget:.4f}s, setting depth to 3 and full quiescence search")
-    elif time_budget <= 4:
-        set_qDepth_restricted(True)
-        depth = 2
-        if debug_search or debug_play:
-            logger.debug(f"Time budget is {time_budget:.4f}s, setting depth to 2 and restricting quiescence search")
-    else:
-        set_qDepth_restricted(False)
-        if debug_search or debug_play:
-            logger.debug(f"Time budget is {time_budget:.4f}s, using full depth and full quiescence search")
+    if time_budget:
+        if time_budget <= 9:
+            depth = 3
+            set_qDepth_restricted(False)
+            if debug_search or debug_play:
+                logger.debug(f"Time budget is {time_budget:.4f}s, setting depth to 3 and full quiescence search")
+        elif time_budget <= 4:
+            set_qDepth_restricted(True)
+            depth = 2
+            if debug_search or debug_play:
+                logger.debug(f"Time budget is {time_budget:.4f}s, setting depth to 2 and restricting quiescence search")
+        else:
+            set_qDepth_restricted(False)
+            if debug_search or debug_play:
+                logger.debug(f"Time budget is {time_budget:.4f}s, using full depth and full quiescence search")
         
 
     start_time = time.perf_counter()

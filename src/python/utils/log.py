@@ -65,6 +65,8 @@ def configure_logging(level_str: str = "info", save_to_file: bool = False, logdi
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if category:
                 log_subdir = logs_dir / f"{category}/{timestamp}"
+            else:
+                log_subdir = logs_dir / timestamp
             log_subdir.mkdir(parents=True, exist_ok=True)
 
             # Full debug log file
