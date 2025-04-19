@@ -32,7 +32,7 @@ python src/python/main.py --player white --depth 4 --color
 python src/python/main.py --player none
 ```
 
-### Infinite Self-Play Loop (Training)
+### Infinite Self-Play Loop
 
 ```bash
 python src/python/main.py --player none --selfplay-loop
