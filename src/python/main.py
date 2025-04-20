@@ -204,7 +204,7 @@ def main():
             while not board.is_game_over():
                 logger.playing(f"\n{print_board_colored(board) if args.color else print_board_clean(board)}")
 
-                move, eval = find_best_move(board, depth)
+                move, eval = find_best_move(board, depth, 10)
                 logger.playing(f"{"White" if board.turn else "Black"} plays: {board.san(move)}")
                 logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. Score: {eval}")
                 board.push(move)
@@ -222,7 +222,7 @@ def main():
         while not board.is_game_over():
             logger.playing(f"\n{print_board_colored(board) if args.color else print_board_clean(board)}")
 
-            move, eval = find_best_move(board, depth)
+            move, eval = find_best_move(board, depth, 10)
             logger.playing(f"{"White" if board.turn else "Black"}  plays: {board.san(move)}")
             logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
             board.push(move)
@@ -246,7 +246,7 @@ def main():
                     logger.warning("Invalid move format or illegal move. Try again.")
                     continue
             else:
-                move, eval = find_best_move(board, depth)
+                move, eval = find_best_move(board, depth, 10)
                 logger.playing(f"Obi-Pawn plays: {move}")
                 logger.info(f"Bot chose {board.san(move)} / {move} from {len(list(board.legal_moves))} legal options. It gave the move a score of {eval}")
                 board.push(move)

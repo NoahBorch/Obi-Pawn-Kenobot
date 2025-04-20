@@ -29,10 +29,8 @@ class PlayingFilter(logging.Filter):
     def filter(self, record):
         return record.levelno == PLAYING_VERBOSE_LEVEL
 
-def configure_logging(level_str: str = "info", save_to_file: bool = False, logdir: str = "logs", category: str = None) -> Path:
-
-
-    level_str = level_str.lower()
+def configure_logging(level_str: str = "info", save_to_file: bool = False, logdir: str = ".logs", category: str = None) -> Path:
+    ...
 
     level_map = {
         "debug": logging.DEBUG,
@@ -41,50 +39,48 @@ def configure_logging(level_str: str = "info", save_to_file: bool = False, logdi
     }
 
     selected_level = level_map.get(level_str, logging.INFO)
-    logger.setLevel(logging.DEBUG)  # Always capture all; filter per handler
+    logger.setLevel(logging.DEBUG)
+
+    
+    std_formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)s - %(message)s', '%H:%M:%S'
+    )
+    playing_formatter = logging.Formatter('%(message)s')
 
     if not logger.hasHandlers():
-        # Console output for DEBUG and INFO (excluding PLAYING)
         std_handler = logging.StreamHandler()
-        std_formatter = logging.Formatter(
-            '[%(asctime)s] %(levelname)s - %(message)s', '%H:%M:%S'
-        )
         std_handler.setFormatter(std_formatter)
         std_handler.addFilter(lambda record: record.levelno != PLAYING_VERBOSE_LEVEL)
         logger.addHandler(std_handler)
 
-        # Console output for PLAYING level
         playing_handler = logging.StreamHandler()
-        playing_formatter = logging.Formatter('%(message)s')
         playing_handler.setFormatter(playing_formatter)
         playing_handler.addFilter(PlayingFilter())
         logger.addHandler(playing_handler)
 
-        if save_to_file:
-            logs_dir = Path(logdir)
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            if category:
-                log_subdir = logs_dir / f"{category}/{timestamp}"
-            else:
-                log_subdir = logs_dir / timestamp
-            log_subdir.mkdir(parents=True, exist_ok=True)
+    if save_to_file:
+        logs_dir = Path(logdir)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_subdir = logs_dir / f"{category}/{timestamp}" if category else logs_dir / timestamp
+        log_subdir.mkdir(parents=True, exist_ok=True)
 
-            # Full debug log file
-            full_log_path = log_subdir / "full_debug.log"
-            full_file_handler = logging.FileHandler(full_log_path, mode="w", encoding="utf-8")
-            full_file_handler.setLevel(logging.DEBUG)
-            full_file_handler.setFormatter(std_formatter)
-            logger.addHandler(full_file_handler)
+        full_log_path = log_subdir / "full_debug.log"
+        full_file_handler = logging.FileHandler(full_log_path, mode="w", encoding="utf-8")
+        full_file_handler.setLevel(logging.DEBUG)
+        full_file_handler.setFormatter(std_formatter)
+        logger.addHandler(full_file_handler)
 
-            # Summary log file (INFO+ only)
-            summary_log_path = log_subdir / "summary.log"
-            summary_file_handler = logging.FileHandler(summary_log_path, mode="w", encoding="utf-8")
-            summary_file_handler.setLevel(logging.INFO)
-            summary_file_handler.setFormatter(std_formatter)
-            logger.addHandler(summary_file_handler)
+        summary_log_path = log_subdir / "summary.log"
+        summary_file_handler = logging.FileHandler(summary_log_path, mode="w", encoding="utf-8")
+        summary_file_handler.setLevel(logging.INFO)
+        summary_file_handler.setFormatter(std_formatter)
+        logger.addHandler(summary_file_handler)
 
-            logger.debug(f"📄 Logging to: {full_log_path} (full) and {summary_log_path} (summary)")
-            return log_subdir
+        logger.debug(f"📄 Logging to: {full_log_path} (full) and {summary_log_path} (summary)")
+        return log_subdir
+
+    return None
+
     
 def log_result(board):
     from utils.counters import get_total_counters

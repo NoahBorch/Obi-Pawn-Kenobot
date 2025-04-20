@@ -1,6 +1,13 @@
 #evaluation.py
-
 import chess
+from pathlib import Path
+import sys
+
+#Filepath shenanigans
+project_root = Path(__file__).parent.parent.resolve()  # this is src/python
+sys.path.insert(0, str(project_root))
+
+
 from utils.log import logger
 from utils.debug_config import get_debug_config
 from utils.constants import CHECKMATE_BASE_SCORE, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME, PIECE_VALUES, PIECE_TYPE_NAMES
@@ -215,10 +222,13 @@ def evaluate_position(board):
     if board.outcome():
         if board.is_checkmate():
             if debug_evaluation:
-                logger.debug(f"Checkmate detected for moving player: {turn}, in position: \n{print_board_clean(board)} after player plays {board.san(board.peek())}")
-            return CHECKMATE_BASE_SCORE if turn else -CHECKMATE_BASE_SCORE
+                try:
+                    logger.debug(f"Checkmate detected for moving player: {turn}, in position: \n{print_board_clean(board)} after player plays {board.peek()}")
+                except Exception as e:
+                    logger.error(f"Error while logging checkmate position: {e}")
+            return -CHECKMATE_BASE_SCORE if turn else CHECKMATE_BASE_SCORE
         else:
-            return -1
+            return 0
     else:
         current_eval = 0
         material_eval_score, white_material_count_no_pawns, black_material_count_no_pawns = count_material(board)
