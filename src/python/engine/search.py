@@ -102,7 +102,7 @@ def quiescence_search(board, qDepth, alpha, beta):
             return -CHECKMATE_BASE_SCORE - qDepth
         return max_eval
     elif (board.can_claim_threefold_repetition() or board.can_claim_fifty_moves()):
-        return -1
+        return 0
     if max_eval >= beta:
         return beta
     if max_eval > alpha:
@@ -115,13 +115,9 @@ def quiescence_search(board, qDepth, alpha, beta):
         board.push(move)
         eval = -quiescence_search(board, qDepth - 1 , -beta, -alpha)
         board.pop()
-        if eval == CHECKMATE_BASE_SCORE:
-            update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
-            return CHECKMATE_BASE_SCORE + qDepth
-        elif eval == -CHECKMATE_BASE_SCORE:
-            update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
-            return -CHECKMATE_BASE_SCORE - qDepth
-
+        if eval >= CHECKMATE_BASE_SCORE:
+                return move, eval
+        
         if eval > max_eval:
             max_eval = eval
         alpha = max(alpha, eval)
@@ -319,9 +315,8 @@ def find_best_move(board, depth, time_budget=None):
                 return move, CHECKMATE_BASE_SCORE + qDepth + GLOBAL_DEPTH
             eval = -negamax_alpha_beta(board, local_depth - 1, -beta, -alpha, remaining_time = remaining_time)
             board.pop()
-            if abs(eval) >= CHECKMATE_BASE_SCORE:
-                if eval > 0:
-                    return move, eval
+            if eval >= CHECKMATE_BASE_SCORE:
+                return move, eval
             current_move_evals[move] = eval
             if debug_search:
                 move_search_time = time.perf_counter() - move_search_time
