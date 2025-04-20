@@ -217,8 +217,7 @@ def evaluate_position(board):
         logger.debug(f"Evaluating position for {'white' if not turn else 'black'}")
         logger.debug(f"Current board: \n{print_board_clean(board)}")
         logger.debug(f"Current phase: {last_logged_phase}")
-        if board.is_checkmate():
-            logger.debug("Checkmate detected")
+        
     if board.outcome():
         if board.is_checkmate():
             if debug_evaluation:

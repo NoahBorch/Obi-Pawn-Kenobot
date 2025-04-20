@@ -179,8 +179,6 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
     start_time = time.perf_counter()
             
     for move in ordered_moves:
-        if move.uci() == "f3d1":
-            logger.debug("\n\n\n\n\nFound move f3d1\n\n\n\n\n")
         if remaining_time:
             elapsed_time = time.perf_counter() - start_time
             if elapsed_time >= remaining_time:
@@ -202,7 +200,7 @@ def negamax_alpha_beta(board, depth, alpha= -float('inf'), beta = float('inf'), 
         if debug_search and depth == GLOBAL_DEPTH - 1:
             logger.debug(f"Evaluated move {board.san(move)} to score {eval}")
         
-        if abs(eval) >= CHECKMATE_BASE_SCORE:
+        if eval >= CHECKMATE_BASE_SCORE:
             update_total_counters(local_positions_evaluated, local_lines_pruned, reset_ply=False)
             return eval
 
@@ -292,8 +290,6 @@ def find_best_move(board, depth, time_budget=None):
         total_moves = len(ordered_moves)
         moves_searched = 0
         for move in ordered_moves:
-            if move.uci() == "e4h4":
-                logger.debug("\n\n\n\n\nFound move e4h4\n\n\n\n\n")
             move_search_time = time.perf_counter()
             elapsed_time = move_search_time - start_time
             remaining_time = time_budget - elapsed_time if time_budget else None
@@ -324,7 +320,8 @@ def find_best_move(board, depth, time_budget=None):
             eval = -negamax_alpha_beta(board, local_depth - 1, -beta, -alpha, remaining_time = remaining_time)
             board.pop()
             if abs(eval) >= CHECKMATE_BASE_SCORE:
-                return move, eval
+                if eval > 0:
+                    return move, eval
             current_move_evals[move] = eval
             if debug_search:
                 move_search_time = time.perf_counter() - move_search_time

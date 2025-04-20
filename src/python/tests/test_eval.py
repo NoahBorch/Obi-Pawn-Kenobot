@@ -11,13 +11,14 @@ from utils.debug_config import set_debug_config_for_module
 set_debug_config_for_module("play", False)
 set_debug_config_for_module("evaluation", False)
 set_debug_config_for_module("search", True)
+from utils.config import set_global_depth
 from engine.evaluation.evaluation import evaluate_position
 from lichess_integration.play import play_board
 from utils.log import logger, configure_logging
 from ui.terminal_prints import print_board_clean
 
 class TestEval(unittest.TestCase):
-    def test_from_FEN(self, fen: str, iterations: int = 1):
+    def test_from_FEN(self, fen: str, iterations: int = 1, depth: int = 4):
         """
         Test the evaluation of a position from a FEN string.
         """
@@ -29,6 +30,8 @@ class TestEval(unittest.TestCase):
             raise ValueError("FEN cannot be None and iterations must be at least 1")
         # Initialize the board from the FEN string
         board = chess.Board(fen)
+        set_global_depth(depth)
+        
 
         logger.info(f"Debugging current position:\n{print_board_clean(board)}")
 

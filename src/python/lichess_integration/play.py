@@ -13,6 +13,7 @@ sys.path.insert(0, str(project_root))
 from engine.search import find_best_move  
 from utils.log import logger
 from utils.debug_config import get_debug_config
+from utils.config import get_global_depth
 from utils.game_phase import calculate_game_phase, get_last_logged_phase, PHASE_ENDGAME, PHASE_MIDGAME, PHASE_OPENING
 
 debug_play = get_debug_config("play")
@@ -66,7 +67,9 @@ def play_board(board: chess.Board, total_time_left: float = None, increment: flo
             logger.debug("No time limit provided, using default move time of 5.0 seconds")
     if debug_play:
         logger.debug(f"Using move time: {move_time:.2f}s")
-    move, eval = find_best_move(board, depth=10, time_budget=move_time)
+
+    depth = get_global_depth()
+    move, eval = find_best_move(board, depth=depth, time_budget=move_time)
 
     think_time = time.perf_counter() - start_time
 
