@@ -10,8 +10,8 @@ project_root = Path(__file__).resolve().parents[1]  # this is src/python
 sys.path.insert(0, str(project_root))
 
 from utils.debug_config import get_debug_config, set_debug_config_for_module, set_no_debug
-set_debug_config_for_module("search", True)
-set_debug_config_for_module("play", True)
+set_debug_config_for_module("search", False)
+set_debug_config_for_module("play", False)
 from engine.search import find_best_move
 from main import set_global_depth
 from ui.terminal_prints import print_board_clean
