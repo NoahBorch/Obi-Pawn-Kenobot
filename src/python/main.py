@@ -50,9 +50,27 @@ def parse_args():
 
     parser.add_argument(
         "--depth",
-        choices=["choose_later"] + [str(i) for i in range(1, 10)],
-        default="choose_later",
-        help="Set the search depth for the engine (default: 5)"
+        choices=["choose_later", "no_limit"] + [str(i) for i in range(1, 20)],
+        default="no_limit",
+        help="Set the search depth for the engine (default: no_limit) may use " \
+        "choose_later if you want to choose the depth after starting the program"
+    )
+
+    parser.add_argument(
+        "--total_time",
+        choices=["choose_later", "no_limit"] + [str(i) for i in range(1, 3*60+1)],
+        default="3",
+        help="Set the total time for each player in min (default: 3 min) may use " \
+        "choose_later if you want to choose the total_time after starting the program"
+        " or no_limit if you only want the bot to be limited by it's search depth"
+    )
+
+    parser.add_argument(
+        "--increment",
+        choices=["choose_later"] + [str(i) for i in range(0, 20)],
+        default="0",
+        help="Set the increment time for each player in seconds (default: no increment) may use " \
+        "choose_later if you want to choose the increment after starting the program"
     )
 
     parser.add_argument(
@@ -155,15 +173,54 @@ def main():
     # Configure logging based on user selection
     configure_logging(get_log_level(args), save_to_file=True, logdir="../../.logs/games")
 
-    if args.depth == "choose_later" or int(args.depth) < 1:
+
+    #Set total time:
+    if args.total_time == "choose later" or int(args.total_time) < 1:
+        players_color = True
+        if args.total_time == "choose later":
+            user_input = input("Choose the total time for each player in minutes: ").strip()
+        elif args.total_time < 1:
+            logger.playing("Invalid choice. Please choose an int ≥ 1.")
+            user_input = input("Choose the total time for each player in minutes: ").strip()
+        while not user_input.isdigit() or int(user_input) < 1:
+            logger.playing("Invalid choice. Please choose an int ≥ 1")
+            user_input = input("Choose the total time for each player in minutes: ").strip()
+        total_time = int(user_input)
+    elif args.total_time == "no_limit":
+        playing_with_time = False
+
+    #Set increment:
+    if args.increment == "choose later" or int(args.increment) < 1:
+        if args.increment == "choose later":
+            user_input = input("Choose the increment for each player in minutes: ").strip()
+        elif args.increment < 1:
+            logger.playing("Invalid choice. Please choose an int ≥ 1.")
+            user_input = input("Choose the increment for each player in minutes: ").strip()
+        while not user_input.isdigit() or int(user_input) < 1:
+            logger.playing("Invalid choice. Please choose an int ≥ 1")
+            user_input = input("Choose the increment for each player in minutes: ").strip()
+        increment = int(user_input)
+
+    #Set depth limit:
+    if args.depth == "no_limit":
+        if not playing_with_time:
+            logger.warning("There must be a depth limit or a time limit in order to get a response from the bot")
+            user_input = "try_again"
+            while not user_input.isdigit() or int(user_input) < 1:
+                if int(user_input) < 1:
+                    logger.playing("Invalid choice. Please choose an int ≥ 1")
+                user_input = input("Choose total time for each player in minutes: ").strip()
+            total_time = int(user_input)
+        else: depth = 1000
+    elif args.depth == "choose_later" or int(args.depth) < 1:
         if args.depth == "choose_later":
             user_input = input("Choose search depth: ").strip()
         elif args.depth < 1:
-            logger.playing("Invalid choice. Please choose a number between 1 and 10.")
-            user_input = input("Choose search depth (1-10): ").strip()
-        while not user_input.isdigit() or int(user_input) < 1 or int(user_input) > 10:
-            logger.playing("Invalid choice. Please choose a number between 1 and 10.")
-            user_input = input("Choose search depth (1-10): ").strip()
+            logger.playing("Invalid choice. Please choose a number between 1 and 20.")
+            user_input = input("Choose search depth (1-20): ").strip()
+        while not user_input.isdigit() or int(user_input) < 1 or int(user_input) > 20:
+            logger.playing("Invalid choice. Please choose a number between 1 and 20.")
+            user_input = input("Choose search depth (1-20): ").strip()
         depth = int(user_input)
        
     else:
@@ -193,6 +250,9 @@ def main():
 
     #PGN
     game, node = create_pgn_game_and_node(players_color, depth)
+
+
+        
 
     if players_color == "only_bot" and args.selfplay_loop:
         logger.playing("Obi-Pawn Kenobot is playing against itself (loop mode).")
