@@ -116,7 +116,7 @@ def quiescence_search(board, qDepth, alpha, beta):
         eval = -quiescence_search(board, qDepth - 1 , -beta, -alpha)
         board.pop()
         if eval >= CHECKMATE_BASE_SCORE:
-                return move, eval
+                return eval
         
         if eval > max_eval:
             max_eval = eval
@@ -259,7 +259,7 @@ def find_best_move(board, depth, time_budget=None):
 
     for local_depth in range(1, depth + 1):
         elapsed_time = time.perf_counter() - start_time
-        if time_budget and elapsed_time * 1.5 >= time_budget:
+        if time_budget and best_move and elapsed_time * 1.5 >= time_budget:
             if debug_search or debug_play:
                 logger.debug(f"Stopped search after completing depth {local_depth - 1} since we're approaching the time limit ({elapsed_time:.4f}s ≥ {time_budget:.4f}s)")
             break

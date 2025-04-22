@@ -1,5 +1,5 @@
-depth = 5
-iterative_depth = 5
+depth = 3
+iterative_depth = 3
 iterative_deepening = True
 qDepth = depth // 2 + 2
 qDepth_restricted = False

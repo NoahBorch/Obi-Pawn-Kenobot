@@ -225,7 +225,7 @@ def evaluate_position(board):
                     logger.debug(f"Checkmate detected for moving player: {turn}, in position: \n{print_board_clean(board)} after player plays {board.peek()}")
                 except Exception as e:
                     logger.error(f"Error while logging checkmate position: {e}")
-            return -CHECKMATE_BASE_SCORE if turn else CHECKMATE_BASE_SCORE
+            return -CHECKMATE_BASE_SCORE
         else:
             return 0
     else:

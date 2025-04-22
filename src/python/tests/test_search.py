@@ -43,7 +43,7 @@ class TestSearch(unittest.TestCase):
         self.run_epd_test_suite(file_name="Bratko-Kopec_test_suite.txt", depth=10, max_lines=10, time_budget=10)
 
     
-    def run_epd_test_suite(self, file_name="EPD_tests.txt", depth=3, max_lines=None, time_budget=None):
+    def run_epd_test_suite(self, file_name="EPD_tests.txt", depth=4, max_lines=None, time_budget=None):
         set_global_depth(depth)
 
         log_path = configure_logging(
@@ -166,4 +166,4 @@ if __name__ == "__main__":
     runner = unittest.TextTestRunner()
     runner.run(suite)
 
-#To run: python3 -m unittest tests.test_search.TestSearch.test_all_EPD_positions
+#To run: python3 -m unittest tests.test_search.TestSearch.run_epd_test_suite

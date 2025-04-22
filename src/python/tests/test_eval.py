@@ -10,7 +10,7 @@ sys.path.insert(0, str(project_root))
 from utils.debug_config import set_debug_config_for_module
 set_debug_config_for_module("play", False)
 set_debug_config_for_module("evaluation", False)
-set_debug_config_for_module("search", True)
+set_debug_config_for_module("search", False)
 from utils.config import set_global_depth
 from engine.evaluation.evaluation import evaluate_position
 from lichess_integration.play import play_board
@@ -18,10 +18,12 @@ from utils.log import logger, configure_logging
 from ui.terminal_prints import print_board_clean
 
 class TestEval(unittest.TestCase):
-    def test_from_FEN(self, fen: str, iterations: int = 1, depth: int = 4):
+    def test_from_FEN(self, fen: str = None, iterations: int = 1, depth: int = 4):
         """
         Test the evaluation of a position from a FEN string.
         """
+        if not fen:
+            return
         if not isinstance(fen, str):
             raise ValueError("FEN must be a string")
         if not isinstance(iterations, int):
@@ -42,8 +44,8 @@ class TestEval(unittest.TestCase):
         
 
         #testing play_board 
-        total_time_left = 3 * 60* 1000  
-        increment = 20000000
+        total_time_left = 1 * 60
+        increment = 10
         logger.info(f"Testing play_board with total_time = {total_time_left}s and increment set to {increment}s")
         move_uci = play_board(board, total_time_left=total_time_left, increment=increment)
         move = chess.Move.from_uci(move_uci)
@@ -62,6 +64,11 @@ class TestEval(unittest.TestCase):
     
     def test_FEN_1(self):
         fen = "1rr3k1/5pp1/p2p3p/1pP1p3/4R3/5q2/P1PP1PPP/3R2K1 w - - 0 26"
+        iterations = 4
+        self.test_from_FEN(fen, iterations)
+
+    def test_FEN_2(self):
+        fen = "r1bqkb1r/pppppppp/2n2n2/8/2B1P3/5Q2/PPPP1PPP/RNB1K1NR b KQkq - 4 3"
         iterations = 4
         self.test_from_FEN(fen, iterations)
 
