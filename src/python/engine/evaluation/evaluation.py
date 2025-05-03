@@ -10,8 +10,8 @@ sys.path.insert(0, str(project_root))
 
 from utils.log import logger
 from utils.debug_config import get_debug_config
-from utils.constants import CHECKMATE_BASE_SCORE, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME, PIECE_VALUES, PIECE_TYPE_NAMES
-from utils.game_phase import get_last_logged_phase
+from utils.constants import CHECKMATE_BASE_SCORE, PHASE_OPENING, PHASE_MIDGAME, PHASE_ENDGAME, PIECE_VALUES, PIECE_TYPE_NAMES, PASSED_PAWN_BONUS_BY_RANK
+from utils.game_phase import calculate_game_phase, get_last_logged_phase
 from engine.evaluation.PSTs import get_piece_square_tables_by_phase
 from ui.terminal_prints import print_board_clean
 
@@ -203,6 +203,289 @@ def endgame_incentives(board):
     bonus = 50 - distance_between_kings
     return bonus 
 
+def check_if_pawn_is_passed(color, pawn, furthest_back_different_colored_pawn_positions_by_file):
+    file = chess.square_file(pawn)
+    rank = chess.square_rank(pawn)  
+    if color == chess.WHITE:
+        black_furthest_back_pawn_positions_by_file = furthest_back_different_colored_pawn_positions_by_file
+        if file == 0:
+            if black_furthest_back_pawn_positions_by_file[1] <= rank:
+                return True
+        elif file == 7:
+            if black_furthest_back_pawn_positions_by_file[6] <= rank:
+                return True
+        else:
+            if black_furthest_back_pawn_positions_by_file[file - 1] <= rank or black_furthest_back_pawn_positions_by_file[file + 1] <= rank:
+                return True
+        return False
+    else:
+        white_furthest_back_pawn_positions_by_file = furthest_back_different_colored_pawn_positions_by_file
+        if file == 0:
+            if white_furthest_back_pawn_positions_by_file[1] >= rank:
+                return True
+        elif file == 7:
+            if white_furthest_back_pawn_positions_by_file[6] >= rank:
+                return True
+        else:
+            if white_furthest_back_pawn_positions_by_file[file - 1] >= rank or white_furthest_back_pawn_positions_by_file[file + 1] >= rank:
+                return True
+        return False
+
+def check_if_pawn_is_connected_passer(color, pawn, same_color_passed_pawns, same_color_furthest_back_pawn_position_by_file, right_file_has_pawn, left_file_has_pawn, files_with_same_color_doubled_pawns, same_color_pawns):
+    """
+    Check if a pawn is a connected passer.
+
+    A connected passer is a passed pawn that has a neighboring pawn on an adjacent file
+    that is also a passed pawn. This function checks for such a condition for a given pawn.
+
+    :param color: The color of the pawn being evaluated (chess.WHITE or chess.BLACK).
+    :param pawn: The square index of the pawn being evaluated. It is assumed to be a passed pawn.
+    :param same_color_passed_pawns: A set of passed pawns of the same color.
+    :param same_color_furthest_back_pawn_position_by_file: A list indicating the furthest back
+           same-colored pawn position by file.
+    :param right_file_has_pawn: Boolean indicating if there is a pawn on the right file.
+    :param left_file_has_pawn: Boolean indicating if there is a pawn on the left file.
+    :param files_with_same_color_doubled_pawns: A set of files where there are doubled pawns
+           of the same color.
+    :param same_color_pawns: A set of all pawns of the same color on the board.
+
+    :return: True if the pawn is a connected passer, otherwise False.
+    """
+
+    file = chess.square_file(pawn)
+    rank = chess.square_rank(pawn)
+    if color == chess.WHITE:
+
+        if left_file_has_pawn:
+            if file - 1 in files_with_same_color_doubled_pawns:
+                for square in same_color_pawns:
+                    if chess.square_file(square) == file - 1:
+                        if chess.square_rank(square) > rank:
+                            if check_if_pawn_is_passed(chess.WHITE, square, same_color_furthest_back_pawn_position_by_file):
+                                return True
+                        elif square in same_color_passed_pawns:
+                            return True
+                          
+            else:
+                left_neighboring_pawn = same_color_furthest_back_pawn_position_by_file[file - 1]
+                if left_neighboring_pawn in same_color_passed_pawns:
+                    return True
+            
+        if right_file_has_pawn:
+            if file + 1 in files_with_same_color_doubled_pawns:
+                for square in same_color_pawns:
+                    if chess.square_file(square) == file + 1:
+                        if chess.square_rank(square) > rank:
+                            if check_if_pawn_is_passed(chess.WHITE, square, same_color_furthest_back_pawn_position_by_file):
+                                return True
+                        elif square in same_color_passed_pawns:
+                            return True
+            else:
+                right_neighboring_pawn = same_color_furthest_back_pawn_position_by_file[file + 1]
+                if right_neighboring_pawn in same_color_passed_pawns:
+                    return True
+                
+    else:
+        return False
+        
+            
+
+
+            
+        
+        
+
+def add_pawn_structure_bonus(board):
+    """
+    TODO:
+    Add bonus for passed pawns
+    Add bonus for connected passed pawns
+    Implenented:
+    Add bonus for pawn chains
+    Add penalty for backward pawns
+    Add penalty for isolated pawns
+    Add penalty for doubled pawns
+    Add penalty for pawn islands
+    """
+
+    # Initialize penalties
+    ISOLATED_PAWN_PENALTY = - 15
+    DOUBLED_PAWN_PENALTY = - 20
+    BACKWARD_PAWN_PENALTY = - 20
+    PAWN_ISLAND_PENALTY = - 10
+    
+
+    PAWN_CHAIN_BASE_BONUS = 10
+    PAWN_CHAIN_HEAD_BONUS = 5
+
+    game_phase = calculate_game_phase(board)
+
+
+    white_pawn_structure = 0
+    black_pawn_structure = 0
+    white_pawns = list(board.pieces(chess.PAWN, chess.WHITE))
+    black_pawns = list(board.pieces(chess.PAWN, chess.BLACK))
+    white_pawns.sort()
+    black_pawns.sort(reverse=True)
+  
+    squares_protected_by_white_pawns = set()
+    squares_protected_by_black_pawns = set()
+    
+    white_furthest_back_pawn_positions_by_file = [8 for i in range(8)]
+    black_furthest_back_pawn_positions_by_file = [0 for i in range(8)]
+    
+    protected_white_pawns = set()
+    protected_black_pawns = set()
+
+    files_with_doubled_white_pawns = set()
+    files_with_doubled_black_pawns = set()
+
+    passed_white_pawns = set()
+    passed_black_pawns = set()
+    connected_passed_white_pawns = set()
+    connected_passed_black_pawns = set()
+    protected_passed_white_pawns = set()
+    protected_passed_black_pawns = set()
+    
+    for square in white_pawns:
+        file = chess.square_file(square)
+        if white_furthest_back_pawn_positions_by_file[file] > chess.square_rank(square):
+            white_furthest_back_pawn_positions_by_file[file] = chess.square_rank(square)
+        squares_protected_by_white_pawns.add(board.attacks(square))
+
+    for square in black_pawns:
+        file = chess.square_file(square)
+        if black_furthest_back_pawn_positions_by_file[file] < chess.square_rank(square):
+            black_furthest_back_pawn_positions_by_file[file] = chess.square_rank(square)
+        squares_protected_by_black_pawns.add(board.attacks(square))
+
+    for pawn in white_pawns:
+        # Check for doubled pawns 
+        file = chess.square_file(pawn)
+        rank = chess.square_rank(pawn)  
+        if white_furthest_back_pawn_positions_by_file[file] != rank:
+            white_pawn_structure += DOUBLED_PAWN_PENALTY
+            files_with_doubled_white_pawns.add(file)
+        
+        #Check for isolated pawns and pawn islands
+        if file == 0:
+            if white_furthest_back_pawn_positions_by_file[1] == 8:
+                white_pawn_structure += ISOLATED_PAWN_PENALTY
+                white_pawn_structure += PAWN_ISLAND_PENALTY
+        elif file == 7:
+            if white_furthest_back_pawn_positions_by_file[6] == 8:
+                white_pawn_structure += ISOLATED_PAWN_PENALTY
+                white_pawn_structure += PAWN_ISLAND_PENALTY
+        else:
+            left_file_has_pawn = (white_furthest_back_pawn_positions_by_file[file - 1] == 8)
+            right_file_has_pawn = (white_furthest_back_pawn_positions_by_file[file + 1] == 8)
+            if left_file_has_pawn and right_file_has_pawn:
+                white_pawn_structure += ISOLATED_PAWN_PENALTY
+                white_pawn_structure += PAWN_ISLAND_PENALTY
+            elif left_file_has_pawn:
+                white_pawn_structure += PAWN_ISLAND_PENALTY
+        
+        # Check for backward pawns
+        can_be_protected = False
+        if file == 0:
+            if white_furthest_back_pawn_positions_by_file[1] <= rank:
+                can_be_protected = True
+        elif file == 7:
+            if white_furthest_back_pawn_positions_by_file[6] <= rank:
+                can_be_protected = True
+        else:
+            if white_furthest_back_pawn_positions_by_file[file - 1] <= rank or white_furthest_back_pawn_positions_by_file[file + 1] <= rank:
+                can_be_protected = True
+        if can_be_protected:
+            #if square in front of pawn is protected by an enemy pawn
+            if pawn + 8 in squares_protected_by_black_pawns:
+                #if any enemy pawns are in front of the pawn
+                if black_furthest_back_pawn_positions_by_file[file] > rank:
+                    white_pawn_structure += BACKWARD_PAWN_PENALTY
+
+        # Check for pawn chains
+        is_protected = False
+        if file == 0:
+            if pawn - 7 in white_pawns:
+                is_protected = True
+                protected_white_pawns.add(pawn)
+                white_pawn_structure += PAWN_CHAIN_BASE_BONUS
+                if pawn - 7 in protected_white_pawns:
+                    white_pawn_structure += PAWN_CHAIN_HEAD_BONUS
+                
+        elif file == 7:
+            if pawn - 9 in white_pawns:
+                is_protected = True
+                protected_white_pawns.add(pawn)
+                white_pawn_structure += PAWN_CHAIN_BASE_BONUS
+                if pawn - 9 in protected_white_pawns:
+                    white_pawn_structure += PAWN_CHAIN_HEAD_BONUS
+        else:
+            if pawn - 9 in white_pawns:
+                is_protected = True
+                protected_white_pawns.add(pawn)
+                white_pawn_structure += PAWN_CHAIN_BASE_BONUS
+                if pawn - 9 in protected_white_pawns:
+                    white_pawn_structure += PAWN_CHAIN_HEAD_BONUS
+
+            if pawn - 7 in white_pawns:
+                is_protected = True
+                protected_white_pawns.add(pawn)
+                white_pawn_structure += PAWN_CHAIN_BASE_BONUS
+                if pawn - 7 in protected_white_pawns:
+                    white_pawn_structure += PAWN_CHAIN_HEAD_BONUS
+
+        # Check for passed pawns
+        if check_if_pawn_is_passed(pawn, black_furthest_back_pawn_positions_by_file, white_furthest_back_pawn_positions_by_file):
+            passed_white_pawns.add(pawn)
+            # Check if pawn is protected passer 
+            if is_protected:
+                protected_passed_white_pawns.add(pawn)
+        
+        
+        # Check if pawn is connected passer
+        if check_if_pawn_is_connected_passer(chess.WHITE, pawn, passed_white_pawns, white_furthest_back_pawn_positions_by_file, right_file_has_pawn, left_file_has_pawn, files_with_doubled_white_pawns, white_pawns):
+            connected_passed_white_pawns.add(pawn)
+
+        for pawn in passed_white_pawns:
+            rank = chess.square_rank(pawn)
+            bonus = PASSED_PAWN_BONUS_BY_RANK[rank]
+            
+            if pawn in protected_passed_white_pawns and pawn in connected_passed_white_pawns:
+                bonus *= 2.5
+            elif pawn in protected_passed_white_pawns:
+                bonus *= 1.5
+            elif pawn in connected_passed_white_pawns:
+                bonus *= 2
+            if game_phase != PHASE_ENDGAME:
+                bonus *= 0.75
+            white_pawn_structure += bonus
+
+
+            
+
+
+
+
+
+
+
+
+                
+                    
+
+
+        
+            
+
+            
+
+
+
+    
+
+    
+
 
 def evaluate_position(board):
     """
@@ -247,3 +530,4 @@ def evaluate_position(board):
                 logger.debug(f"Endgame evaluation score: {endgame_incentives(board)}")
             logger.debug(f"Board state: \n{print_board_clean(board)}")
         return current_eval if turn else -current_eval
+    

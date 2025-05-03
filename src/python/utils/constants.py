@@ -24,3 +24,13 @@ PIECE_TYPE_NAMES = {
     chess.QUEEN: "Queen",
     chess.KING: "King"
 }
+
+PASSED_PAWN_BONUS_BY_RANK = {
+    8: 0,
+    7: 120,
+    6: 80,
+    5: 50,
+    4: 30,
+    3: 15,
+    2: 15,
+}

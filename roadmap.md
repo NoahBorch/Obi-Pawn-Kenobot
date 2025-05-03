@@ -21,7 +21,7 @@
 - [ ] Improve evaluation function with basic heuristics (e.g., piece-square tables, king safety)
     - [x] piece-square tables
     - [ ] king safety
-- [ ] Add clock-based time management (evaluate and move within X milliseconds)
+- [x] Add clock-based time management (evaluate and move within X milliseconds)
 - [x] Add support for loading board states from FEN for easier testing
 - [x] Add PGN generation to store game history
 
@@ -29,19 +29,19 @@
 **Goal:** Play games online through Lichess bots API
 
 - [x] Register a bot account on Lichess and generate a personal API token
-- [ ] Install `berserk` or `lichess-bot` library to interface with the Lichess API
-- [ ] Set up API authentication using the token
-- [ ] Poll for challenges using the API
-- [ ] Accept a challenge and hook into the game loop
-- [ ] Feed opponent moves into your local `chess.Board` instance
-- [ ] Respond with your bot's moves using the same API
-- [ ] Log game results and store PGNs locally
+- [x] Install `berserk` or `lichess-bot` library to interface with the Lichess API
+- [x] Set up API authentication using the token
+- [x] Poll for challenges using the API
+- [x] Accept a challenge and hook into the game loop
+- [x] Feed opponent moves into your local `chess.Board` instance
+- [x] Respond with your bot's moves using the same API
+- [x] Log game results and store PGNs locally
 
 ## 🧠 Phase 4: Opening Book + Search Improvements
 **Goal:** Optimize early game & speed up search
 
-- [ ] Import or create an opening book (e.g., .bin or .pgn of known openings)
-- [ ] Integrate book lookups in early moves
+- [x] Import or create an opening book (e.g., .bin or .pgn of known openings)
+- [x] Integrate book lookups in early moves
 - [ ] Implement a transposition table (hashing)
 - [x] Add basic move ordering (captures, checks first)
 - [x] Integrate iterative deepening to manage depth dynamically
